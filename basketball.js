@@ -50,7 +50,15 @@ const Basketball_base = defs.Basketball_base =
 
           // !!! Camera changed here
           // TODO: you can change the camera as needed.
-          Shader.assign_camera( Mat4.look_at (vec3 (5, 8, 15), vec3 (0, 5, 0), vec3 (0, 1, 0)), this.uniforms );
+          Shader.assign_camera( 
+            Mat4.look_at(
+                vec3(0, 15, 25),  
+                vec3(0, 10, 0),
+                vec3(0, 1, 0)    
+            ), 
+            this.uniforms 
+          );
+        
         }
         this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
@@ -61,15 +69,16 @@ const Basketball_base = defs.Basketball_base =
         // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
         // !!! Light changed here
         const light_position = vec4(20, 20, 20, 1.0);
-        this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
+        this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 100000000 ) ];
 
         // draw axis arrows.
-        // this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
+        this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
 
         // draw basketball court
         const model_transform_court = Mat4.identity()
         .times(Mat4.translation(0, 7.5, 0))
-        .times(Mat4.scale(50, 50, 50, 0));
+        .times(Mat4.scale(50, 50, 50, 0))
+        .times(Mat4.rotation(Math.PI / 2, 0, 1, 0));
         this.shapes.court.draw(caller, this.uniforms, model_transform_court, this.materials.plastic)
       }
     }

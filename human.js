@@ -17,7 +17,7 @@ export const Articulated_Human = class Articulated_Human {
     const torso_transform = Mat4.scale(1, 2.5, 0.5);
     this.torso_node = new Node("torso", sphere_shape, torso_transform);
     // root -> torso
-    const root_location = Mat4.translation(-1, 7.5, 0);
+    const root_location = Mat4.translation(0, 7.5, 0);
     this.root = new Arc("root", null, this.torso_node, root_location);
 
     // head node
