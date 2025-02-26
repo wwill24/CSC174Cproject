@@ -52,8 +52,8 @@ const Basketball_base = defs.Basketball_base =
           // TODO: you can change the camera as needed.
           Shader.assign_camera( 
             Mat4.look_at(
-                vec3(0, 15, 25),  
-                vec3(0, 10, 0),
+                vec3(0, 20, 30),  
+                vec3(0, 12, 0),
                 vec3(0, 1, 0)    
             ), 
             this.uniforms 
