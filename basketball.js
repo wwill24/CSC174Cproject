@@ -1,10 +1,9 @@
 import {tiny, defs} from './examples/common.js';
 import { Articulated_Human } from './human.js';
+import { Shape_From_File } from './examples/obj-file-demo.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
-
-// TODO: you should implement the required classes here or in another file.
 
 export
 const Basketball_base = defs.Basketball_base =
@@ -19,9 +18,12 @@ const Basketball_base = defs.Basketball_base =
         this.time = 0;
         this.isMoving = true;
 
-        this.shapes = { 'box'  : new defs.Cube(),
+        this.shapes = { 
+          'box'  : new defs.Cube(),
           'ball' : new defs.Subdivision_Sphere( 4 ),
-          'axis' : new defs.Axis_Arrows() };
+          'axis' : new defs.Axis_Arrows(),
+          court: new Shape_From_File("assets/court/court.obj")
+        };
 
         // *** Materials: *** 
         const basic = new defs.Basic_Shader();
@@ -62,7 +64,13 @@ const Basketball_base = defs.Basketball_base =
         this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
 
         // draw axis arrows.
-        this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
+        // this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
+
+        // draw basketball court
+        const model_transform_court = Mat4.identity()
+        .times(Mat4.translation(0, 7.5, 0))
+        .times(Mat4.scale(50, 50, 50, 0));
+        this.shapes.court.draw(caller, this.uniforms, model_transform_court, this.materials.plastic)
       }
     }
 
@@ -85,14 +93,14 @@ export class Basketball extends Basketball_base
 
     // !!! Draw ground
     let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 0.01, 10));
-    this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow } );
+    // this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow } );
 
     // TODO: you should draw scene here.
     // TODO: you can change the wall and board as needed.
-    let wall_transform = Mat4.translation(0, 7, -1.2).times(Mat4.scale(8, 7, 0.1));
-    this.shapes.box.draw( caller, this.uniforms, wall_transform, { ...this.materials.plastic, color: wall_color } );
-    let board_transform = Mat4.translation(1.5, 7, -1).times(Mat4.scale(3, 3, 0.1));
-    this.shapes.box.draw( caller, this.uniforms, board_transform, { ...this.materials.plastic, color: blackboard_color } );
+    // let wall_transform = Mat4.translation(0, 7, -1.2).times(Mat4.scale(8, 7, 0.1));
+    // this.shapes.box.draw( caller, this.uniforms, wall_transform, { ...this.materials.plastic, color: wall_color } );
+    // let board_transform = Mat4.translation(1.5, 7, -1).times(Mat4.scale(3, 3, 0.1));
+    // this.shapes.box.draw( caller, this.uniforms, board_transform, { ...this.materials.plastic, color: blackboard_color } );
     
     // drawing the human at resting position
     this.human.draw(caller, this.uniforms, this.materials.plastic);

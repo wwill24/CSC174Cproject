@@ -177,7 +177,7 @@ export const Articulated_Human = class Articulated_Human {
       
       const white = color(1,1,1,1);
 
-      if (node.name === "r_hand") {
+      if (node.name === "r_hand" || node.name === 'l_hand') {
           node.shape.draw(webgl_manager, uniforms, matrix, { ...material, color: white })
       }
       else {
