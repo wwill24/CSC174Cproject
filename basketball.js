@@ -1,6 +1,7 @@
 import {tiny, defs} from './examples/common.js';
 import { Articulated_Human } from './human.js';
 import { Shape_From_File } from './examples/obj-file-demo.js';
+import { Particle, ParticleSystem, Spring } from './util.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
@@ -33,12 +34,19 @@ const Basketball_base = defs.Basketball_base =
         this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
         this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
         this.materials.rgb = { shader: tex_phong, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) }
+        this.materials.court = { shader: tex_phong, ambient: .5, texture: new Texture( "assets/court/Material.002_baseColor.png" ) }
 
         this.ball_location = vec3(1, 1, 1);
         this.ball_radius = 0.25;
 
-        // TODO: you should create a Spline class instance
+        // Creating a human instance
         this.human = new Articulated_Human();
+
+        // Creating basketball
+        this.particleSystem = new ParticleSystem();
+        
+        // drawing the particle (basketball)
+        this.particleSystem.createParticles(1);
       }
 
       render_animation( caller )
@@ -50,11 +58,19 @@ const Basketball_base = defs.Basketball_base =
 
           // !!! Camera changed here
           // TODO: you can change the camera as needed.
+          // Shader.assign_camera( 
+          //   Mat4.look_at(
+          //       vec3(0, 20, 30),  
+          //       vec3(0, 12, 0),
+          //       vec3(0, 1, 0)    
+          //   ), 
+          //   this.uniforms 
+          // );
           Shader.assign_camera( 
             Mat4.look_at(
-                vec3(0, 20, 30),  
-                vec3(0, 12, 0),
-                vec3(0, 1, 0)    
+                vec3(0, 40, -38),  
+                vec3(0, 29, -38), 
+                vec3(0, 0, -1)  
             ), 
             this.uniforms 
           );
@@ -79,13 +95,18 @@ const Basketball_base = defs.Basketball_base =
         .times(Mat4.translation(0, 7.5, 0))
         .times(Mat4.scale(50, 50, 50, 0))
         .times(Mat4.rotation(Math.PI / 2, 0, 1, 0));
-        this.shapes.court.draw(caller, this.uniforms, model_transform_court, this.materials.plastic)
+        this.shapes.court.draw(caller, this.uniforms, model_transform_court, this.materials.court)
       }
     }
 
 
 export class Basketball extends Basketball_base
-{                                                    
+{    
+  constructor() {
+      super();
+      this.sim = 0;
+      this.render = true;
+    } 
   render_animation( caller )
   {                                               
     super.render_animation( caller );
@@ -99,41 +120,31 @@ export class Basketball extends Basketball_base
           blackboard_color = color( 0.2, 0.2, 0.2, 1 );
 
     const t = this.t = this.uniforms.animation_time/1000;
-
-    // !!! Draw ground
-    let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 0.01, 10));
-    // this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow } );
-
-    // TODO: you should draw scene here.
-    // TODO: you can change the wall and board as needed.
-    // let wall_transform = Mat4.translation(0, 7, -1.2).times(Mat4.scale(8, 7, 0.1));
-    // this.shapes.box.draw( caller, this.uniforms, wall_transform, { ...this.materials.plastic, color: wall_color } );
-    // let board_transform = Mat4.translation(1.5, 7, -1).times(Mat4.scale(3, 3, 0.1));
-    // this.shapes.box.draw( caller, this.uniforms, board_transform, { ...this.materials.plastic, color: blackboard_color } );
     
     // drawing the human at resting position
     this.human.draw(caller, this.uniforms, this.materials.plastic);
+
+    if (this.render) {
+      const step = 1 / 1000; // Fixed small time step for smoother simulation.
+      const fps = 60;  
+      let dt = Math.min(1.0 / 30, 1.0 / fps); 
+
+      let next = this.sim + dt; // Calculate the next simulation time.
+
+      while (this.sim < next) {
+          this.particleSystem.update(step); // Apply small time step updates.
+          this.sim += step; 
+      }
+    }
+
+    this.particleSystem.draw(caller, this.uniforms, this.shapes, this.materials)
   }
 
   render_controls()
   {                                 
     // render_controls(): Sets up a panel of interactive HTML elements, including
     // buttons with key bindings for affecting this scene, and live info readouts.
-    this.control_panel.innerHTML += "Assignment 2: IK Engine";
+    this.control_panel.innerHTML += "Basketball Animation";
     this.new_line();    
-    // TODO: You can add your button events for debugging. (optional)
-    this.key_triggered_button( "Debug", [ "Shift", "D" ], this.debug );
-    this.key_triggered_button( "Debug 2", [ "Shift", "E" ], this.debug2 );
-    this.new_line();
-  }
-
-  debug() {
-    this.human.debug();
-    console.log("Current end effector at ", this.human.get_end_effector_position());
-  }
-
-  debug2() {
-    this.human.debug(null, 2);
-    console.log("Current end effector at ", this.human.get_end_effector_position());
   }
 }
