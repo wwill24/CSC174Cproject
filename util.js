@@ -6,7 +6,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export class Particle {
     constructor() {
       this.mass = 1;
-      this.position = vec3(0, 18, -34);
+      this.position = vec3(0, 17, -34);
       this.velocity = vec3(0, 0, -10);
       this.force = vec3(0, 0, 0);
       this.acceleration = vec3(0, 0, 0);
@@ -116,8 +116,61 @@ export class Particle {
       }
     }
 
-    rimAndNetCollision() {
-      
+    netCollision() {
+      const e = this.elasticity * 0.6;  // Reduce bounce intensity
+      const v = this.viscosity;
+  
+      // Net parameters
+      const topCenter = vec3(0, 14, -38);
+      const bottomCenter = vec3(0, 10, -38);
+      const topRadius = 2;
+      const bottomRadius = 1;
+      const netHeight = topCenter[1] - bottomCenter[1];
+  
+      // Ball parameters
+      let ballHeight = this.position[1];
+  
+      // Ensure ball is within net height range
+      if (ballHeight < bottomCenter[1] || ballHeight > topCenter[1]) return;
+  
+      // Compute net radius at the ball's height (linear interpolation)
+      let heightRatio = (ballHeight - bottomCenter[1]) / netHeight;
+      let netRadiusAtHeight = bottomRadius + heightRatio * (topRadius - bottomRadius);
+  
+      // Get ball's XZ position (ignoring Y)
+      let ballXZ = vec3(this.position[0], 0, this.position[2]);
+      let netXZ = vec3(topCenter[0], 0, topCenter[2]);
+  
+      // Distance from net center in XZ plane
+      let displacementXZ = ballXZ.minus(netXZ);
+      let distanceXZ = displacementXZ.norm();
+  
+      // Ensure distanceXZ is a valid number
+      if (isNaN(distanceXZ) || distanceXZ === undefined) {
+          console.error("Invalid distanceXZ calculation!", displacementXZ);
+          return;
+      }
+  
+      // Collision check
+      let penetrationDepth = distanceXZ - netRadiusAtHeight;
+  
+      // Ensure penetrationDepth is valid
+      if (isNaN(penetrationDepth)) {
+          console.error("NaN detected in penetrationDepth!", distanceXZ, netRadiusAtHeight);
+          return;
+      }
+  
+      if (Math.abs(penetrationDepth) < 0.7) {
+          let surfaceNormal = (distanceXZ > 0) ? displacementXZ.normalized() : vec3(1, 0, 0); // Default normal
+  
+          // Bounce effect (reduce velocity slightly)
+          let relativeVelocity = this.velocity.dot(surfaceNormal);
+          this.velocity = this.velocity.minus(surfaceNormal.times(relativeVelocity * (1 + e)));
+  
+          // Correct position with limit to prevent teleportation
+          let correctionFactor = Math.min(0.5, Math.abs(penetrationDepth)); // Prevents extreme jumps
+          this.position = this.position.minus(surfaceNormal.times(correctionFactor));
+      }
     }
 
     wallCollision() {
@@ -240,6 +293,7 @@ export class ParticleSystem {
       }
       particle.groundCollision();
       particle.backboardCollision();
+      particle.netCollision();
     }
   }
 
@@ -294,38 +348,3 @@ export class ParticleSystem {
       .times(Mat4.scale(0.1, len / 2, 0.1));
   }
 }
-
-export class Spring {
-    constructor(particle1, particle2, springConstant, dampingConstant, baseLength) {
-      this.particle1 = particle1;
-      this.particle2 = particle2;
-      this.springConstant = springConstant;
-      this.dampingConstant = dampingConstant;
-      this.baseLength = baseLength;
-    }
-  
-    computeForces() {
-      const displacement = this.particle2.position.minus(this.particle1.position);
-      const currentLength = displacement.norm();
-      if (currentLength === 0) return { springForce: vec3(0, 0, 0), dampingForce: vec3(0, 0, 0) };
-  
-      const direction = displacement.normalized();
-      const relativeVelocity = this.particle2.velocity.minus(this.particle1.velocity);
-  
-      const springForce = direction.times(this.springConstant * (currentLength - this.baseLength));
-      const dampingForce = direction.times(this.dampingConstant * relativeVelocity.dot(direction));
-  
-      return { springForce, dampingForce };
-    }
-  
-    calculateForce() {
-      const { springForce, dampingForce } = this.computeForces();
-      return springForce.plus(dampingForce);
-    }
-  
-    applySpringForce() {
-      const force = this.calculateForce();
-      this.particle1.applyAdditionalForce(force);
-      this.particle2.applyAdditionalForce(force.times(-1));
-    }
-  }

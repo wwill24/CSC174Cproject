@@ -1,7 +1,7 @@
 import {tiny, defs} from './examples/common.js';
 import { Articulated_Human } from './human.js';
 import { Shape_From_File } from './examples/obj-file-demo.js';
-import { Particle, ParticleSystem, Spring } from './util.js';
+import { Particle, ParticleSystem } from './util.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
@@ -58,6 +58,7 @@ const Basketball_base = defs.Basketball_base =
 
           // !!! Camera changed here
           // TODO: you can change the camera as needed.
+          // Starter Camera Angle (will use for demo)
           // Shader.assign_camera( 
           //   Mat4.look_at(
           //       vec3(0, 20, 30),  
@@ -66,14 +67,26 @@ const Basketball_base = defs.Basketball_base =
           //   ), 
           //   this.uniforms 
           // );
+
+          // Debugging looking down birds eye view at backboard
+          // Shader.assign_camera( 
+          //   Mat4.look_at(
+          //       vec3(0, 40, -38),  
+          //       vec3(0, 29, -38), 
+          //       vec3(0, 0, -1)  
+          //   ), 
+          //   this.uniforms 
+          // );
+
+          // Debugging looking straight at backboard
           Shader.assign_camera( 
             Mat4.look_at(
-                vec3(0, 40, -38),  
-                vec3(0, 29, -38), 
-                vec3(0, 0, -1)  
+                vec3(0, 15, -20),  // Keep the camera in the same position
+                vec3(0, 15, -40),  // Look farther in the negative z direction
+                vec3(0, 1, 0)      // Keep "up" the same
             ), 
             this.uniforms 
-          );
+        );        
         
         }
         this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
