@@ -99,7 +99,6 @@ export class Particle {
       ) {
         this.position = this.position.plus(backboardNormal.times(distance * -1));
         this.velocity = this.velocity.minus(backboardNormal.times(relativeVelocity * 1.80));
-        
         if (tangentialVelocity.norm() > 0) {
           let tangentialMagnitude = this.force.minus(normal).norm();
           let normalMagnitude = normal.norm();
@@ -117,59 +116,84 @@ export class Particle {
     }
 
     netCollision() {
+      console.log("Initial position:", this.position);
       const e = this.elasticity * 0.6;  // Reduce bounce intensity
       const v = this.viscosity;
-  
-      // Net parameters
+    
+      // Net parameters - truncated cone (wider at top)
       const topCenter = vec3(0, 14, -38);
       const bottomCenter = vec3(0, 10, -38);
-      const topRadius = 2;
-      const bottomRadius = 1;
+      const topRadius = 2;     // Wider at top
+      const bottomRadius = 1;  // Narrower at bottom
       const netHeight = topCenter[1] - bottomCenter[1];
-  
+      const netThickness = 0.1;  // Thickness of the net material
+      
       // Ball parameters
       let ballHeight = this.position[1];
-  
-      // Ensure ball is within net height range
-      if (ballHeight < bottomCenter[1] || ballHeight > topCenter[1]) return;
-  
+      
+      // Ensure ball is near net height range (with some margin)
+      const margin = 0.7 + netThickness;
+      if (ballHeight < bottomCenter[1] - margin || ballHeight > topCenter[1] + margin) return;
+      
       // Compute net radius at the ball's height (linear interpolation)
       let heightRatio = (ballHeight - bottomCenter[1]) / netHeight;
+      heightRatio = Math.max(0, Math.min(1, heightRatio)); // Clamp between 0 and 1
       let netRadiusAtHeight = bottomRadius + heightRatio * (topRadius - bottomRadius);
-  
-      // Get ball's XZ position (ignoring Y)
+      
+      // Ball's position in the XZ plane
       let ballXZ = vec3(this.position[0], 0, this.position[2]);
-      let netXZ = vec3(topCenter[0], 0, topCenter[2]);
-  
-      // Distance from net center in XZ plane
+      let netXZ = vec3(topCenter[0], 0, topCenter[2]); // Center in XZ plane
+      
+      // Vector from net center to ball in XZ plane
       let displacementXZ = ballXZ.minus(netXZ);
       let distanceXZ = displacementXZ.norm();
-  
-      // Ensure distanceXZ is a valid number
-      if (isNaN(distanceXZ) || distanceXZ === undefined) {
-          console.error("Invalid distanceXZ calculation!", displacementXZ);
-          return;
+      
+      // Handle case where ball is exactly at center
+      if (distanceXZ < 0.0001) {
+        displacementXZ = vec3(0.01, 0, 0);
+        distanceXZ = 0.01;
       }
-  
-      // Collision check
-      let penetrationDepth = distanceXZ - netRadiusAtHeight;
-  
-      // Ensure penetrationDepth is valid
-      if (isNaN(penetrationDepth)) {
-          console.error("NaN detected in penetrationDepth!", distanceXZ, netRadiusAtHeight);
-          return;
-      }
-  
-      if (Math.abs(penetrationDepth) < 0.7) {
-          let surfaceNormal = (distanceXZ > 0) ? displacementXZ.normalized() : vec3(1, 0, 0); // Default normal
-  
-          // Bounce effect (reduce velocity slightly)
-          let relativeVelocity = this.velocity.dot(surfaceNormal);
+      
+      // Calculate distance to inside and outside surface of the conical net
+      let distanceToInside = distanceXZ - (netRadiusAtHeight - netThickness);
+      let distanceToOutside = (netRadiusAtHeight + netThickness) - distanceXZ;
+      
+      // Check collision with either inside or outside of net
+      let isInsideCollision = distanceToInside < 0.7 && distanceToInside > 0;
+      let isOutsideCollision = distanceToOutside < 0.7 && distanceToOutside > 0 && distanceXZ > netRadiusAtHeight;
+      
+      if (isInsideCollision || isOutsideCollision) {
+        // Determine collision normal (points in or out depending on side of collision)
+        let normalDirection = isInsideCollision ? 1 : -1;
+        let surfaceNormal = displacementXZ.normalized().times(normalDirection);
+        
+        console.log("Collision with", isInsideCollision ? "inside" : "outside", "surface");
+        console.log("Surface Normal:", surfaceNormal);
+        
+        // Calculate relative velocity along the collision normal
+        let relativeVelocity = this.velocity.dot(surfaceNormal);
+        // Only bounce if moving toward the surface
+        if (relativeVelocity > 0) {
+          // Apply bounce with elasticity
           this.velocity = this.velocity.minus(surfaceNormal.times(relativeVelocity * (1 + e)));
-  
-          // Correct position with limit to prevent teleportation
-          let correctionFactor = Math.min(0.5, Math.abs(penetrationDepth)); // Prevents extreme jumps
-          this.position = this.position.minus(surfaceNormal.times(correctionFactor));
+          
+          // Move ball outside the net surface
+          let penetrationDepth = isInsideCollision ? 
+              0.7 - distanceToInside : 
+              0.7 - distanceToOutside;
+          
+          let correctionFactor = Math.min(penetrationDepth, 0.5);
+          this.position = this.position.plus(surfaceNormal.times(correctionFactor * -1));
+          
+          console.log("After collision position:", this.position);
+        }
+      }
+      
+      // Check for ball going through the hoop (scoring)
+      if (distanceXZ < netRadiusAtHeight - netThickness - 0.7 &&
+          Math.abs(ballHeight - topCenter[1]) < 1.0) {
+        console.log("Ball passing through hoop!");
+        // Add scoring logic here if needed
       }
     }
 
