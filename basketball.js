@@ -201,14 +201,12 @@ export class Basketball extends Basketball_base {
     // Update the human's walking animation.
     // (Make sure your updateWalking method properly sets the articulation for the leg joints.)
     this.human.updateWalking(t);
-
     // Draw the human.
-    // (Here we pass caller, uniforms, and a material. You can change the material as needed.)
-    const t = (this.t = this.uniforms.animation_time / 1000);
-
-    // drawing the human at resting position
     this.human.draw(caller, this.uniforms, this.materials.plastic);
 
+    /**********************************
+     *  Update & Draw the Basketball
+     **********************************/
     if (this.render) {
       const step = 1 / 1000; // Fixed small time step for smoother simulation.
       const fps = 60;
