@@ -227,6 +227,7 @@ export class Basketball extends Basketball_base {
       this.shapes,
       this.materials
     );
+    console.log(this.particleSystem.particles[0].position[2]);
   }
 
   render_controls() {
