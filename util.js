@@ -6,10 +6,12 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export class Particle {
     constructor() {
       this.mass = 1;
-      this.position = vec3(0, 17, -34);
-      this.velocity = vec3(0, 0, -10);
+      this.position = vec3(3.5, 17, -34);
+      this.velocity = vec3( -10* Math.sin(Math.PI / 4), 0, -10 * Math.cos(Math.PI / 4));
       this.force = vec3(0, 0, 0);
       this.acceleration = vec3(0, 0, 0);
+      this.staticFriction = 0.9;
+      this.kineticFriction = 0.8;
     }
   
     setProperties(mass, position, velocity) {
@@ -65,8 +67,8 @@ export class Particle {
     }
 
     backboardCollision() {
-      const e = this.elasticity;
-      const v = this.viscosity;
+      const e = 1;
+      const v = 1;
       const mu_s = this.staticFriction;
       const mu_k = this.kineticFriction;
   
@@ -116,17 +118,13 @@ export class Particle {
     }
 
     netCollision() {
-      console.log("Initial position:", this.position);
-      const e = this.elasticity * 0.6;  // Reduce bounce intensity
-      const v = this.viscosity;
-    
-      // Net parameters - truncated cone (wider at top)
+      // Net parameters 
       const topCenter = vec3(0, 14, -38);
       const bottomCenter = vec3(0, 10, -38);
-      const topRadius = 2;     // Wider at top
-      const bottomRadius = 1;  // Narrower at bottom
+      const topRadius = 2;   
+      const bottomRadius = 1; 
       const netHeight = topCenter[1] - bottomCenter[1];
-      const netThickness = 0.1;  // Thickness of the net material
+      const netThickness = 0.1; 
       
       // Ball parameters
       let ballHeight = this.position[1];
@@ -142,7 +140,7 @@ export class Particle {
       
       // Ball's position in the XZ plane
       let ballXZ = vec3(this.position[0], 0, this.position[2]);
-      let netXZ = vec3(topCenter[0], 0, topCenter[2]); // Center in XZ plane
+      let netXZ = vec3(topCenter[0], 0, topCenter[2]);
       
       // Vector from net center to ball in XZ plane
       let displacementXZ = ballXZ.minus(netXZ);
@@ -159,23 +157,20 @@ export class Particle {
       let distanceToOutside = (netRadiusAtHeight + netThickness) - distanceXZ;
       
       // Check collision with either inside or outside of net
-      let isInsideCollision = distanceToInside < 0.7 && distanceToInside > 0;
-      let isOutsideCollision = distanceToOutside < 0.7 && distanceToOutside > 0 && distanceXZ > netRadiusAtHeight;
+      let isInsideCollision = distanceToInside < 0.9 && distanceToInside > 0;
+      let isOutsideCollision = distanceToOutside < 0.9 && distanceToOutside > 0 && distanceXZ > netRadiusAtHeight;
       
       if (isInsideCollision || isOutsideCollision) {
         // Determine collision normal (points in or out depending on side of collision)
         let normalDirection = isInsideCollision ? 1 : -1;
         let surfaceNormal = displacementXZ.normalized().times(normalDirection);
         
-        console.log("Collision with", isInsideCollision ? "inside" : "outside", "surface");
-        console.log("Surface Normal:", surfaceNormal);
-        
         // Calculate relative velocity along the collision normal
         let relativeVelocity = this.velocity.dot(surfaceNormal);
         // Only bounce if moving toward the surface
         if (relativeVelocity > 0) {
           // Apply bounce with elasticity
-          this.velocity = this.velocity.minus(surfaceNormal.times(relativeVelocity * (1 + e)));
+          this.velocity = this.velocity.minus(surfaceNormal.times(relativeVelocity * 1.5));
           
           // Move ball outside the net surface
           let penetrationDepth = isInsideCollision ? 
@@ -184,16 +179,7 @@ export class Particle {
           
           let correctionFactor = Math.min(penetrationDepth, 0.5);
           this.position = this.position.plus(surfaceNormal.times(correctionFactor * -1));
-          
-          console.log("After collision position:", this.position);
         }
-      }
-      
-      // Check for ball going through the hoop (scoring)
-      if (distanceXZ < netRadiusAtHeight - netThickness - 0.7 &&
-          Math.abs(ballHeight - topCenter[1]) < 1.0) {
-        console.log("Ball passing through hoop!");
-        // Add scoring logic here if needed
       }
     }
 

@@ -158,7 +158,7 @@ export const Basketball_base =
         caller,
         this.uniforms,
         model_transform_court,
-        this.materials.plastic
+        this.materials.court
       );
     }
   });
@@ -181,19 +181,6 @@ export class Basketball extends Basketball_base {
       blackboard_color = color(0.2, 0.2, 0.2, 1);
 
     const t = (this.t = this.uniforms.animation_time / 1000);
-
-    // !!! Draw ground
-    let floor_transform = Mat4.translation(0, 0, 0).times(
-      Mat4.scale(10, 0.01, 10)
-    );
-    // this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow } );
-
-    // TODO: you should draw scene here.
-    // TODO: you can change the wall and board as needed.
-    // let wall_transform = Mat4.translation(0, 7, -1.2).times(Mat4.scale(8, 7, 0.1));
-    // this.shapes.box.draw( caller, this.uniforms, wall_transform, { ...this.materials.plastic, color: wall_color } );
-    // let board_transform = Mat4.translation(1.5, 7, -1).times(Mat4.scale(3, 3, 0.1));
-    // this.shapes.box.draw( caller, this.uniforms, board_transform, { ...this.materials.plastic, color: blackboard_color } );
 
     /**********************************
      *  Update & Draw the Human
