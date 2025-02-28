@@ -1,6 +1,7 @@
 import { tiny, defs } from "./examples/common.js";
 import { Articulated_Human } from "./human.js";
 import { Shape_From_File } from "./examples/obj-file-demo.js";
+import { Particle, ParticleSystem } from "./util.js";
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
@@ -47,11 +48,20 @@ export const Basketball_base =
         ambient: 0.5,
         texture: new Texture("assets/rgb.jpg"),
       };
+      this.materials.court = {
+        shader: tex_phong,
+        ambient: 0.5,
+        texture: new Texture("assets/court/Material.002_baseColor.png"),
+      };
 
       this.ball_location = vec3(1, 1, 1);
       this.ball_radius = 0.25;
 
-      // TODO: you should create a Spline class instance
+      // Creating basketball
+      this.particleSystem = new ParticleSystem();
+      // drawing the particle (basketball)
+      this.particleSystem.createParticles(1);
+      // Creating a human instance
       this.human = new Articulated_Human();
       // Control points for spline path for human to walk.
       this.splineControlPoints = [
@@ -79,8 +89,33 @@ export const Basketball_base =
 
         // !!! Camera changed here
         // TODO: you can change the camera as needed.
+        // Starter Camera Angle (will use for demo)
+        // Shader.assign_camera(
+        //   Mat4.look_at(
+        //       vec3(0, 20, 30),
+        //       vec3(0, 12, 0),
+        //       vec3(0, 1, 0)
+        //   ),
+        //   this.uniforms
+        // );
+
+        // Debugging looking down birds eye view at backboard
+        // Shader.assign_camera(
+        //   Mat4.look_at(
+        //       vec3(0, 40, -38),
+        //       vec3(0, 29, -38),
+        //       vec3(0, 0, -1)
+        //   ),
+        //   this.uniforms
+        // );
+
+        // Debugging looking straight at backboard
         Shader.assign_camera(
-          Mat4.look_at(vec3(0, 20, 30), vec3(0, 12, 0), vec3(0, 1, 0)),
+          Mat4.look_at(
+            vec3(0, 15, -20), // Keep the camera in the same position
+            vec3(0, 15, -40), // Look farther in the negative z direction
+            vec3(0, 1, 0) // Keep "up" the same
+          ),
           this.uniforms
         );
       }
@@ -129,6 +164,11 @@ export const Basketball_base =
   });
 
 export class Basketball extends Basketball_base {
+  constructor() {
+    super();
+    this.sim = 0;
+    this.render = true;
+  }
   render_animation(caller) {
     super.render_animation(caller);
 
@@ -164,33 +204,36 @@ export class Basketball extends Basketball_base {
 
     // Draw the human.
     // (Here we pass caller, uniforms, and a material. You can change the material as needed.)
+    const t = (this.t = this.uniforms.animation_time / 1000);
+
+    // drawing the human at resting position
     this.human.draw(caller, this.uniforms, this.materials.plastic);
+
+    if (this.render) {
+      const step = 1 / 1000; // Fixed small time step for smoother simulation.
+      const fps = 60;
+      let dt = Math.min(1.0 / 30, 1.0 / fps);
+
+      let next = this.sim + dt; // Calculate the next simulation time.
+
+      while (this.sim < next) {
+        this.particleSystem.update(step); // Apply small time step updates.
+        this.sim += step;
+      }
+    }
+
+    this.particleSystem.draw(
+      caller,
+      this.uniforms,
+      this.shapes,
+      this.materials
+    );
   }
 
   render_controls() {
     // render_controls(): Sets up a panel of interactive HTML elements, including
     // buttons with key bindings for affecting this scene, and live info readouts.
-    this.control_panel.innerHTML += "Assignment 2: IK Engine";
+    this.control_panel.innerHTML += "Basketball Animation";
     this.new_line();
-    // TODO: You can add your button events for debugging. (optional)
-    this.key_triggered_button("Debug", ["Shift", "D"], this.debug);
-    this.key_triggered_button("Debug 2", ["Shift", "E"], this.debug2);
-    this.new_line();
-  }
-
-  debug() {
-    this.human.debug();
-    console.log(
-      "Current end effector at ",
-      this.human.get_end_effector_position()
-    );
-  }
-
-  debug2() {
-    this.human.debug(null, 2);
-    console.log(
-      "Current end effector at ",
-      this.human.get_end_effector_position()
-    );
   }
 }
