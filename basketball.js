@@ -1,163 +1,237 @@
-import {tiny, defs} from './examples/common.js';
-import { Articulated_Human } from './human.js';
-import { Shape_From_File } from './examples/obj-file-demo.js';
-import { Particle, ParticleSystem } from './util.js';
+import { tiny, defs } from "./examples/common.js";
+import { Articulated_Human } from "./human.js";
+import { Shape_From_File } from "./examples/obj-file-demo.js";
+import { Particle, ParticleSystem } from "./util.js";
 
 // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
+  tiny;
 
-export
-const Basketball_base = defs.Basketball_base =
-    class Basketball_base extends Component
-    {                                          
-      init()
-      {
-        console.log("init")
+export const Basketball_base =
+  (defs.Basketball_base = class Basketball_base extends Component {
+    init() {
+      console.log("init");
 
-        // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
-        this.hover = this.swarm = false;
-        this.time = 0;
-        this.isMoving = true;
+      // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
+      this.hover = this.swarm = false;
+      this.time = 0;
+      this.isMoving = true;
 
-        this.shapes = { 
-          'box'  : new defs.Cube(),
-          'ball' : new defs.Subdivision_Sphere( 4 ),
-          'axis' : new defs.Axis_Arrows(),
-          court: new Shape_From_File("assets/court/court.obj")
-        };
+      this.shapes = {
+        box: new defs.Cube(),
+        ball: new defs.Subdivision_Sphere(4),
+        axis: new defs.Axis_Arrows(),
+        court: new Shape_From_File("assets/court/court.obj"),
+      };
 
-        // *** Materials: *** 
-        const basic = new defs.Basic_Shader();
-        const phong = new defs.Phong_Shader();
-        const tex_phong = new defs.Textured_Phong();
-        this.materials = {};
-        this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
-        this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
-        this.materials.rgb = { shader: tex_phong, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) }
-        this.materials.court = { shader: tex_phong, ambient: .5, texture: new Texture( "assets/court/Material.002_baseColor.png" ) }
+      // *** Materials: ***
+      const basic = new defs.Basic_Shader();
+      const phong = new defs.Phong_Shader();
+      const tex_phong = new defs.Textured_Phong();
+      this.materials = {};
+      this.materials.plastic = {
+        shader: phong,
+        ambient: 0.2,
+        diffusivity: 1,
+        specularity: 0.5,
+        color: color(0.9, 0.5, 0.9, 1),
+      };
+      this.materials.metal = {
+        shader: phong,
+        ambient: 0.2,
+        diffusivity: 1,
+        specularity: 1,
+        color: color(0.9, 0.5, 0.9, 1),
+      };
+      this.materials.rgb = {
+        shader: tex_phong,
+        ambient: 0.5,
+        texture: new Texture("assets/rgb.jpg"),
+      };
+      this.materials.court = {
+        shader: tex_phong,
+        ambient: 0.5,
+        texture: new Texture("assets/court/Material.002_baseColor.png"),
+      };
 
-        this.ball_location = vec3(1, 1, 1);
-        this.ball_radius = 0.25;
+      this.ball_location = vec3(1, 1, 1);
+      this.ball_radius = 0.25;
 
-        // Creating a human instance
-        this.human = new Articulated_Human();
+      // Creating basketball
+      this.particleSystem = new ParticleSystem();
+      // drawing the particle (basketball)
+      this.particleSystem.createParticles(1);
+      // Creating a human instance
+      this.human = new Articulated_Human();
+      // Control points for spline path for human to walk.
+      this.splineControlPoints = [
+        [20, 0, 20], // Top right
+        [0, 0, 30], // Top center
+        [-20, 0, 20], // Top left
+        [-30, 0, 0], // Left center
+        [-20, 0, -20], // Bottom left
+        [0, 0, -30], // Bottom center
+        [20, 0, -20], // Bottom right
+        [30, 0, 0], // Right center
+        [20, 0, 20], // Close the loop
+      ];
+    }
 
-        // Creating basketball
-        this.particleSystem = new ParticleSystem();
-        
-        // drawing the particle (basketball)
-        this.particleSystem.createParticles(1);
+    render_animation(caller) {
+      // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
+      if (!caller.controls) {
+        this.animated_children.push(
+          (caller.controls = new defs.Movement_Controls({
+            uniforms: this.uniforms,
+          }))
+        );
+        caller.controls.add_mouse_controls(caller.canvas);
+
+        // !!! Camera changed here
+        // TODO: you can change the camera as needed.
+        // Starter Camera Angle (will use for demo)
+        // Shader.assign_camera(
+        //   Mat4.look_at(
+        //       vec3(0, 20, 30),
+        //       vec3(0, 12, 0),
+        //       vec3(0, 1, 0)
+        //   ),
+        //   this.uniforms
+        // );
+
+        // Debugging looking down birds eye view at backboard
+        // Shader.assign_camera(
+        //   Mat4.look_at(
+        //       vec3(0, 40, -38),
+        //       vec3(0, 29, -38),
+        //       vec3(0, 0, -1)
+        //   ),
+        //   this.uniforms
+        // );
+
+        // Debugging looking straight at backboard
+        Shader.assign_camera(
+          Mat4.look_at(
+            vec3(0, 15, -20), // Keep the camera in the same position
+            vec3(0, 15, -40), // Look farther in the negative z direction
+            vec3(0, 1, 0) // Keep "up" the same
+          ),
+          this.uniforms
+        );
       }
+      this.uniforms.projection_transform = Mat4.perspective(
+        Math.PI / 4,
+        caller.width / caller.height,
+        1,
+        100
+      );
 
-      render_animation( caller )
-      {                                  
-        // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
-        if( !caller.controls )
-        { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
-          caller.controls.add_mouse_controls( caller.canvas );
+      // *** Lights: *** Values of vector or point lights.  They'll be consulted by
+      // the shader when coloring shapes.  See Light's class definition for inputs.
+      const t = (this.t = this.uniforms.animation_time / 1000);
 
-          // !!! Camera changed here
-          // TODO: you can change the camera as needed.
-          // Starter Camera Angle (will use for demo)
-          // Shader.assign_camera( 
-          //   Mat4.look_at(
-          //       vec3(0, 20, 30),  
-          //       vec3(0, 12, 0),
-          //       vec3(0, 1, 0)    
-          //   ), 
-          //   this.uniforms 
-          // );
+      // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
+      // !!! Light changed here
+      const light_position = vec4(20, 20, 20, 1.0);
+      this.uniforms.lights = [
+        defs.Phong_Shader.light_source(
+          light_position,
+          color(1, 1, 1, 1),
+          100000000
+        ),
+      ];
 
-          // Debugging looking down birds eye view at backboard
-          // Shader.assign_camera( 
-          //   Mat4.look_at(
-          //       vec3(0, 40, -38),  
-          //       vec3(0, 29, -38), 
-          //       vec3(0, 0, -1)  
-          //   ), 
-          //   this.uniforms 
-          // );
+      // draw axis arrows.
+      this.shapes.axis.draw(
+        caller,
+        this.uniforms,
+        Mat4.identity(),
+        this.materials.rgb
+      );
 
-          // Debugging looking straight at backboard
-          Shader.assign_camera( 
-            Mat4.look_at(
-                vec3(0, 15, -20),  // Keep the camera in the same position
-                vec3(0, 15, -40),  // Look farther in the negative z direction
-                vec3(0, 1, 0)      // Keep "up" the same
-            ), 
-            this.uniforms 
-        );        
-        
-        }
-        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
-
-        // *** Lights: *** Values of vector or point lights.  They'll be consulted by
-        // the shader when coloring shapes.  See Light's class definition for inputs.
-        const t = this.t = this.uniforms.animation_time/1000;
-
-        // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
-        // !!! Light changed here
-        const light_position = vec4(20, 20, 20, 1.0);
-        this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 100000000 ) ];
-
-        // draw axis arrows.
-        this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
-
-        // draw basketball court
-        const model_transform_court = Mat4.identity()
+      // draw basketball court
+      const model_transform_court = Mat4.identity()
         .times(Mat4.translation(0, 7.5, 0))
         .times(Mat4.scale(50, 50, 50, 0))
         .times(Mat4.rotation(Math.PI / 2, 0, 1, 0));
-        this.shapes.court.draw(caller, this.uniforms, model_transform_court, this.materials.court)
-      }
+      this.shapes.court.draw(
+        caller,
+        this.uniforms,
+        model_transform_court,
+        this.materials.plastic
+      );
     }
+  });
 
-
-export class Basketball extends Basketball_base
-{    
-  constructor() {
-      super();
-      this.sim = 0;
-      this.render = true;
-    } 
-  render_animation( caller )
-  {                                               
-    super.render_animation( caller );
+export class Basketball extends Basketball_base {
+  constructor() {
+    super();
+    this.sim = 0;
+    this.render = true;
+  }
+  render_animation(caller) {
+    super.render_animation(caller);
 
     /**********************************
      Start coding down here!!!!
      **********************************/
-    const blue = color( 0,0,1,1 ), 
-          yellow = color( 1,0.7,0,1 ), 
-          wall_color = color( 0.7, 1.0, 0.8, 1 ), 
-          blackboard_color = color( 0.2, 0.2, 0.2, 1 );
+    const blue = color(0, 0, 1, 1),
+      yellow = color(1, 0.7, 0, 1),
+      wall_color = color(0.7, 1.0, 0.8, 1),
+      blackboard_color = color(0.2, 0.2, 0.2, 1);
 
-    const t = this.t = this.uniforms.animation_time/1000;
-    
-    // drawing the human at resting position
+    const t = (this.t = this.uniforms.animation_time / 1000);
+
+    // !!! Draw ground
+    let floor_transform = Mat4.translation(0, 0, 0).times(
+      Mat4.scale(10, 0.01, 10)
+    );
+    // this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow } );
+
+    // TODO: you should draw scene here.
+    // TODO: you can change the wall and board as needed.
+    // let wall_transform = Mat4.translation(0, 7, -1.2).times(Mat4.scale(8, 7, 0.1));
+    // this.shapes.box.draw( caller, this.uniforms, wall_transform, { ...this.materials.plastic, color: wall_color } );
+    // let board_transform = Mat4.translation(1.5, 7, -1).times(Mat4.scale(3, 3, 0.1));
+    // this.shapes.box.draw( caller, this.uniforms, board_transform, { ...this.materials.plastic, color: blackboard_color } );
+
+    /**********************************
+     *  Update & Draw the Human
+     **********************************/
+    // Update the human's walking animation.
+    // (Make sure your updateWalking method properly sets the articulation for the leg joints.)
+    this.human.updateWalking(t);
+    // Draw the human.
     this.human.draw(caller, this.uniforms, this.materials.plastic);
 
+    /**********************************
+     *  Update & Draw the Basketball
+     **********************************/
     if (this.render) {
       const step = 1 / 1000; // Fixed small time step for smoother simulation.
-      const fps = 60;  
-      let dt = Math.min(1.0 / 30, 1.0 / fps); 
+      const fps = 60;
+      let dt = Math.min(1.0 / 30, 1.0 / fps);
 
       let next = this.sim + dt; // Calculate the next simulation time.
 
       while (this.sim < next) {
-          this.particleSystem.update(step); // Apply small time step updates.
-          this.sim += step; 
+        this.particleSystem.update(step); // Apply small time step updates.
+        this.sim += step;
       }
     }
 
-    this.particleSystem.draw(caller, this.uniforms, this.shapes, this.materials)
+    this.particleSystem.draw(
+      caller,
+      this.uniforms,
+      this.shapes,
+      this.materials
+    );
   }
 
-  render_controls()
-  {                                 
+  render_controls() {
     // render_controls(): Sets up a panel of interactive HTML elements, including
     // buttons with key bindings for affecting this scene, and live info readouts.
     this.control_panel.innerHTML += "Basketball Animation";
-    this.new_line();    
+    this.new_line();
   }
 }
