@@ -22,6 +22,7 @@ export const Basketball_base =
         ball: new defs.Subdivision_Sphere(4),
         axis: new defs.Axis_Arrows(),
         court: new Shape_From_File("assets/court/court.obj"),
+        rack: new Shape_From_File("assets/court/racks.obj")
       };
 
       // *** Materials: ***
@@ -53,6 +54,13 @@ export const Basketball_base =
         ambient: 0.5,
         texture: new Texture("assets/court/Material.002_baseColor.png"),
       };
+      this.materials.rack = {
+        shader: phong,
+        ambient: 0.2,
+        diffusivity: 1,
+        specularity: 1,
+        color: color(0, 0, 1, 1),
+      }
 
       this.ball_location = vec3(1, 1, 1);
       this.ball_radius = 0.25;
@@ -160,6 +168,12 @@ export const Basketball_base =
         model_transform_court,
         this.materials.court
       );
+
+      const model_transform_rack = Mat4.identity()
+        .times(Mat4.translation(0, 3, 0))
+        .times(Mat4.scale(4,4,4,0));
+
+      this.shapes.rack.draw(caller, this.uniforms, model_transform_rack, this.materials.rack);
     }
   });
 
@@ -213,6 +227,7 @@ export class Basketball extends Basketball_base {
       this.shapes,
       this.materials
     );
+    console.log(this.particleSystem.particles[0].position[2]);
   }
 
   render_controls() {

@@ -185,8 +185,200 @@ export class Particle {
       }
     }
 
-    wallCollision() {
+    wallCollision_right() {
+      const e    = 1;                     
+      const v    = 1;                     
+      const mu_s = this.staticFriction;   
+      const mu_k = this.kineticFriction;  
+    
+      // bounce the ball opposite way
+      const wallX      = 38;
+      const wallNormal = vec3(-1, 0, 0);
+      const ballRadius = 0.7;  
 
+      // If distance > 0, it means the ball center has penetrated past the plane.
+      let distance = this.position[0] - (wallX - ballRadius);
+    
+      // Project velocity onto the wall’s normal:
+      let relativeVelocity    = this.velocity.dot(wallNormal);
+      let tangentialVelocity  = this.velocity.minus(wallNormal.times(relativeVelocity));
+    
+      let spring = wallNormal.times(e * Math.max(distance, 0));
+      let damping = wallNormal.times(v * relativeVelocity);
+      let normal = wallNormal.times(this.force.dot(wallNormal)).times(-1);
+
+      this.force = this.force.plus(spring.minus(damping));
+    
+      // Actual collision response if the ball is penetrating the wall plane:
+      if (distance > 0) {
+        this.position[0] = wallX - ballRadius;
+    
+        // Invert the force 
+        this.velocity = this.velocity.minus(wallNormal.times(relativeVelocity * 1.8));
+    
+        if (tangentialVelocity.norm() > 0) {
+          let tangentialMagnitude = this.force.minus(normal).norm();
+          let normalMagnitude     = normal.norm();
+          // If below static friction threshold, slow down tangential velocity
+          if (tangentialMagnitude < mu_s * normalMagnitude) {
+            let slowdownFactor  = tangentialMagnitude / (mu_s * normalMagnitude);
+            this.velocity       = this.velocity.times(slowdownFactor);
+            this.acceleration   = this.acceleration.times(slowdownFactor);
+          }
+          else {
+            // Kinetic friction
+            let frictionDirection = tangentialVelocity.normalized().times(-1);
+            this.force = this.force.plus(frictionDirection.times(mu_k * normalMagnitude));
+          }
+        }
+      }
+    }
+
+    wallCollision_left() {
+      const e    = 1;                     
+      const v    = 1;                     
+      const mu_s = this.staticFriction;   
+      const mu_k = this.kineticFriction;  
+    
+      // bounce the ball opposite way
+      const wallX      = -37;
+      const wallNormal = vec3(1, 0, 0);
+      const ballRadius = 0.7;  
+
+      // If distance < 0, it means the ball center has penetrated past the plane.
+      let distance = this.position[0] - (wallX - ballRadius);
+    
+      // Project velocity onto the wall’s normal:
+      let relativeVelocity    = this.velocity.dot(wallNormal);
+      let tangentialVelocity  = this.velocity.minus(wallNormal.times(relativeVelocity));
+    
+      let spring = wallNormal.times(e * Math.max(distance, 0));
+      let damping = wallNormal.times(v * relativeVelocity);
+      let normal = wallNormal.times(this.force.dot(wallNormal)).times(-1);
+
+      this.force = this.force.plus(spring.minus(damping));
+    
+      // Actual collision response if the ball is penetrating the wall plane:
+      if (distance < 0) {
+        this.position[0] = wallX - ballRadius;
+    
+        // Invert the force 
+        this.velocity = this.velocity.minus(wallNormal.times(relativeVelocity * 1.8));
+    
+        if (tangentialVelocity.norm() > 0) {
+          let tangentialMagnitude = this.force.minus(normal).norm();
+          let normalMagnitude     = normal.norm();
+          // If below static friction threshold, slow down tangential velocity
+          if (tangentialMagnitude < mu_s * normalMagnitude) {
+            let slowdownFactor  = tangentialMagnitude / (mu_s * normalMagnitude);
+            this.velocity       = this.velocity.times(slowdownFactor);
+            this.acceleration   = this.acceleration.times(slowdownFactor);
+          }
+          else {
+            // Kinetic friction
+            let frictionDirection = tangentialVelocity.normalized().times(-1);
+            this.force = this.force.plus(frictionDirection.times(mu_k * normalMagnitude));
+          }
+        }
+      }
+    }
+
+    wallCollision_top() {
+      const e    = 1;                     
+      const v    = 1;                     
+      const mu_s = this.staticFriction;   
+      const mu_k = this.kineticFriction;  
+    
+      // bounce the ball opposite way
+      const wallZ      = -52.5;
+      const wallNormal = vec3(0, 0, 1);
+      const ballRadius = 0.7;  
+
+      // If distance > 0, it means the ball center has penetrated past the plane.
+      let distance = this.position[2] - (wallZ - ballRadius);
+    
+      // Project velocity onto the wall’s normal:
+      let relativeVelocity    = this.velocity.dot(wallNormal);
+      let tangentialVelocity  = this.velocity.minus(wallNormal.times(relativeVelocity));
+    
+      let spring = wallNormal.times(e * Math.max(distance, 0));
+      let damping = wallNormal.times(v * relativeVelocity);
+      let normal = wallNormal.times(this.force.dot(wallNormal)).times(-1);
+
+      this.force = this.force.plus(spring.minus(damping));
+    
+      // Actual collision response if the ball is penetrating the wall plane:
+      if (distance < 0) {
+        this.position[2] = wallZ - ballRadius;
+    
+        // Invert the force 
+        this.velocity = this.velocity.minus(wallNormal.times(relativeVelocity * 1.8));
+    
+        if (tangentialVelocity.norm() > 0) {
+          let tangentialMagnitude = this.force.minus(normal).norm();
+          let normalMagnitude     = normal.norm();
+          // If below static friction threshold, slow down tangential velocity
+          if (tangentialMagnitude < mu_s * normalMagnitude) {
+            let slowdownFactor  = tangentialMagnitude / (mu_s * normalMagnitude);
+            this.velocity       = this.velocity.times(slowdownFactor);
+            this.acceleration   = this.acceleration.times(slowdownFactor);
+          }
+          else {
+            // Kinetic friction
+            let frictionDirection = tangentialVelocity.normalized().times(-1);
+            this.force = this.force.plus(frictionDirection.times(mu_k * normalMagnitude));
+          }
+        }
+      }
+    }
+
+    wallCollision_bottom() {
+      const e    = 1;                     
+      const v    = 1;                     
+      const mu_s = this.staticFriction;   
+      const mu_k = this.kineticFriction;  
+    
+      // bounce the ball opposite way
+      const wallZ      = 52.5;
+      const wallNormal = vec3(0, 0, -1);
+      const ballRadius = 0.7;  
+
+      // If distance > 0, it means the ball center has penetrated past the plane.
+      let distance = this.position[2] - (wallZ - ballRadius);
+    
+      // Project velocity onto the wall’s normal:
+      let relativeVelocity    = this.velocity.dot(wallNormal);
+      let tangentialVelocity  = this.velocity.minus(wallNormal.times(relativeVelocity));
+    
+      let spring = wallNormal.times(e * Math.max(distance, 0));
+      let damping = wallNormal.times(v * relativeVelocity);
+      let normal = wallNormal.times(this.force.dot(wallNormal)).times(-1);
+
+      this.force = this.force.plus(spring.minus(damping));
+    
+      // Actual collision response if the ball is penetrating the wall plane:
+      if (distance > 0) {
+        this.position[2] = wallZ - ballRadius;
+    
+        // Invert the force 
+        this.velocity = this.velocity.minus(wallNormal.times(relativeVelocity * 1.8));
+    
+        if (tangentialVelocity.norm() > 0) {
+          let tangentialMagnitude = this.force.minus(normal).norm();
+          let normalMagnitude     = normal.norm();
+          // If below static friction threshold, slow down tangential velocity
+          if (tangentialMagnitude < mu_s * normalMagnitude) {
+            let slowdownFactor  = tangentialMagnitude / (mu_s * normalMagnitude);
+            this.velocity       = this.velocity.times(slowdownFactor);
+            this.acceleration   = this.acceleration.times(slowdownFactor);
+          }
+          else {
+            // Kinetic friction
+            let frictionDirection = tangentialVelocity.normalized().times(-1);
+            this.force = this.force.plus(frictionDirection.times(mu_k * normalMagnitude));
+          }
+        }
+      }
     }
   
     simulateEuler(step) {
@@ -306,6 +498,10 @@ export class ParticleSystem {
       particle.groundCollision();
       particle.backboardCollision();
       particle.netCollision();
+      particle.wallCollision_right();
+      particle.wallCollision_left();
+      particle.wallCollision_top();
+      particle.wallCollision_bottom();
     }
   }
 
