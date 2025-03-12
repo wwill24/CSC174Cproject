@@ -90,14 +90,14 @@ export const Basketball_base =
         // !!! Camera changed here
         // TODO: you can change the camera as needed.
         // Starter Camera Angle (will use for demo)
-        // Shader.assign_camera(
-        //   Mat4.look_at(
-        //       vec3(0, 20, 30),
-        //       vec3(0, 12, 0),
-        //       vec3(0, 1, 0)
-        //   ),
-        //   this.uniforms
-        // );
+        Shader.assign_camera(
+          Mat4.look_at(
+              vec3(0, 20, 30),
+              vec3(0, 12, 0),
+              vec3(0, 1, 0)
+          ),
+          this.uniforms
+        );
 
         // Debugging looking down birds eye view at backboard
         // Shader.assign_camera(
@@ -110,14 +110,14 @@ export const Basketball_base =
         // );
 
         // Debugging looking straight at backboard
-        Shader.assign_camera(
-          Mat4.look_at(
-            vec3(0, 15, -20), // Keep the camera in the same position
-            vec3(0, 15, -40), // Look farther in the negative z direction
-            vec3(0, 1, 0) // Keep "up" the same
-          ),
-          this.uniforms
-        );
+        // Shader.assign_camera(
+        //   Mat4.look_at(
+        //     vec3(0, 15, -20), // Keep the camera in the same position
+        //     vec3(0, 15, -40), // Look farther in the negative z direction
+        //     vec3(0, 1, 0) // Keep "up" the same
+        //   ),
+        //   this.uniforms
+        // );
       }
       this.uniforms.projection_transform = Mat4.perspective(
         Math.PI / 4,

@@ -6,12 +6,14 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export class Particle {
     constructor() {
       this.mass = 1;
-      this.position = vec3(3.5, 17, -34);
-      this.velocity = vec3( -10* Math.sin(Math.PI / 4), 0, -10 * Math.cos(Math.PI / 4));
+      this.position = vec3(0, 17, -30);
+      // this.velocity = vec3( -10* Math.sin(Math.PI / 4), 0, -10 * Math.cos(Math.PI / 4));
+      this.velocity = vec3(0, 5, -5);
       this.force = vec3(0, 0, 0);
       this.acceleration = vec3(0, 0, 0);
       this.staticFriction = 0.9;
       this.kineticFriction = 0.8;
+      this.radius = 0.7;
     }
   
     setProperties(mass, position, velocity) {
@@ -80,7 +82,7 @@ export class Particle {
       const backboardHeight = 6;
       const halfWidth = backboardWidth / 2;
       const halfHeight = backboardHeight / 2;
-      const ballRadius = 0.7;
+      const ballRadius = this.radius;
   
       // Compute distance from the front face of the backboard
       let distance = this.position[2] - (backboardZ + ballRadius); // Adjust for ball radius
@@ -119,7 +121,7 @@ export class Particle {
 
     netCollision() {
       // Net parameters 
-      const topCenter = vec3(0, 14, -38);
+      const topCenter = vec3(0, 13.49, -38);
       const bottomCenter = vec3(0, 10, -38);
       const topRadius = 2;   
       const bottomRadius = 1; 
