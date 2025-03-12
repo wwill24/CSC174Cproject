@@ -22,7 +22,7 @@ export const Basketball_base =
         ball: new defs.Subdivision_Sphere(4),
         axis: new defs.Axis_Arrows(),
         court: new Shape_From_File("assets/court/court.obj"),
-        rack: new Shape_From_File("assets/court/racks.obj")
+        rack: new Shape_From_File("assets/rack/racks.obj")
       };
 
       // *** Materials: ***
