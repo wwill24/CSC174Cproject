@@ -357,57 +357,6 @@ export const Articulated_Human = class Articulated_Human {
   // Moves the body and animates the leg joints. Call updateWalking(time)
   // in your animation loop (time in seconds).
   updateWalking(time) {
-    // Assume we have stored control points in this.controlPoints.
-    const cp = this.controlPoints;
-    if (cp.length < 4) return; // need at least 4 control points
-
-    // Define a period for a complete loop along the spline.
-    const period = 10; // seconds for one full loop
-    const t_norm = (time % period) / period; // normalized parameter in [0,1]
-
-    // Compute segment information.
-    const segmentCount = cp.length;
-    const segmentLength = 1 / segmentCount;
-    const segment = Math.floor(t_norm / segmentLength);
-    const localT = (t_norm - segment * segmentLength) / segmentLength;
-
-    // Wrap around indices for cyclic behavior.
-    const idx0 = (segment + segmentCount - 1) % segmentCount;
-    const idx1 = segment % segmentCount;
-    const idx2 = (segment + 1) % segmentCount;
-    const idx3 = (segment + 2) % segmentCount;
-
-    // Evaluate the spline to get the current position.
-    const pos = this.catmullRom(localT, cp[idx0], cp[idx1], cp[idx2], cp[idx3]);
-
-    // --- Compute the Tangent to Determine Orientation ---
-    const dt = 0.001;
-    const localT_next = Math.min(localT + dt, 1.0);
-    const pos_next = this.catmullRom(
-      localT_next,
-      cp[idx0],
-      cp[idx1],
-      cp[idx2],
-      cp[idx3]
-    );
-    let tangent = [
-      pos_next[0] - pos[0],
-      pos_next[1] - pos[1],
-      pos_next[2] - pos[2],
-    ];
-    tangent[1] = 0; // Project onto the horizontal plane
-    const norm = Math.sqrt(tangent[0] * tangent[0] + tangent[2] * tangent[2]);
-    if (norm > 0) {
-      tangent[0] /= norm;
-      tangent[2] /= norm;
-    }
-    const angle = Math.atan2(tangent[0], tangent[2]);
-
-    // --- Update the Root's Transformation ---
-    this.root.location_matrix = Mat4.translation(pos[0], pos[1], pos[2]).times(
-      Mat4.rotation(angle, 0, 1, 0)
-    );
-
     // --- Improved Leg Motion ---
     const stepFrequency = 3; // Adjust for realistic stepping speed
     const hipAmplitude = 0.3; // Hip movement range
@@ -437,9 +386,6 @@ export const Articulated_Human = class Articulated_Human {
     this.torso_node.apply_transform(torsoSway);
 
     // Arms swing opposite to legs for natural movement
-    // this.r_shoulder.update_articulation([
-    //   armAmplitude * -stepCycle, // Right arm moves back when right leg moves forward
-    // ]);
     this.l_shoulder.update_articulation([
       armAmplitude * stepCycle, // Left arm moves forward when left leg moves back
     ]);
