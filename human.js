@@ -366,14 +366,14 @@ export const Articulated_Human = class Articulated_Human {
     const stepCycle = Math.sin(stepFrequency * time);
 
     // Legs move in opposite phases
-    this.r_hip.update_articulation([hipAmplitude * stepCycle]);
-    this.l_hip.update_articulation([hipAmplitude * -stepCycle]);
+    this.l_hip.update_articulation([hipAmplitude * stepCycle]);
+    this.r_hip.update_articulation([hipAmplitude * -stepCycle]);
 
     // Knees bend when foot lifts (absolute value smooths motion)
-    this.r_knee.update_articulation([
+    this.l_knee.update_articulation([
       kneeAmplitude * Math.max(0, -stepCycle), // Bend when rising
     ]);
-    this.l_knee.update_articulation([
+    this.r_knee.update_articulation([
       kneeAmplitude * Math.max(0, stepCycle), // Opposite leg bending
     ]);
 
@@ -395,44 +395,8 @@ export const Articulated_Human = class Articulated_Human {
   // Shooting Animation
   // ---------------------------
   updateShooting(time) {
-    const shooting_frequency = 0.8;
-    const shooting_phase = (Math.sin(time * shooting_frequency) + 1) / 2;
 
-    const gather_target = vec3(-0.2, 1.2, 0.3);  
-    const release_target = vec3(0.3, 2.2, 0.1);  
-
-    const shooting_target = vec3(
-        gather_target[0] + (release_target[0] - gather_target[0]) * shooting_phase,
-        gather_target[1] + (release_target[1] - gather_target[1]) * shooting_phase,
-        gather_target[2] + (release_target[2] - gather_target[2]) * shooting_phase
-    );
-
-    this.updateIK(shooting_target);
-
-    // Shoulder movement
-    const shoulder_rotation = Math.sin(time * shooting_frequency) * Math.PI / 4 - Math.PI / 4;
-    this.r_shoulder.update_articulation([
-        0,  
-        shoulder_rotation,  
-        Math.PI / 2 
-    ]);
-
-    // Elbow rotation
-    const elbow_rotation = Math.PI / 2 + (Math.sin(time * shooting_frequency) * Math.PI / 4);
-    this.r_elbow.update_articulation([
-        elbow_rotation,  
-        elbow_rotation * 0.5,  
-        0   
-    ]);
-
-    // Wrist flick motion
-    const wrist_rotation = Math.sin(time * shooting_frequency) * Math.PI / 3;
-    this.r_wrist.update_articulation([
-        wrist_rotation,  
-        0,  
-        0   
-    ]);
-}
+  }
 
 
   // ---------------------------
@@ -574,5 +538,50 @@ class End_Effector {
     this.parent = parent;
     this.local_position = local_position;
     this.global_position = null;
+  }
+}
+
+
+export class ShootingSpline {
+  constructor() {
+    this.numPoints = 1000;
+    this.points = [];
+    for (let i = 0; i <= this.numPoints; i++) {
+      let t = i / this.numPoints;
+      let pt = this.placePointOnCurve(t);
+      this.points.push(pt)
+    }
+  }
+  
+  placePointOnCurve(t) {
+    let x = t;  
+    let y = Math.sin((Math.PI / 2) * t);  
+    return vec3(x, y, 0);
+}
+
+
+  lerp(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+  
+  getPointOnCurve(t) {
+    t = t % 1;
+    let scaled = t * this.numPoints;
+    let index = Math.floor(scaled);
+    let p0 = this.points[index];
+    let p1 = this.points[(index + 1) % this.points.length];
+    
+    return this.lerp(p0, p1, scaled - index);
+  }
+  
+
+  draw(caller, uniforms, board_transform, material) {
+    const scaleMatrix = Mat4.scale(0.15, 0.15, 0.15);
+  
+    for (const pt of this.points) {
+      const worldPt = board_transform.times(vec4(...pt, 1));
+      const transform = Mat4.translation(...worldPt).times(scaleMatrix);
+      caller.shapes.ball.draw(caller, uniforms, transform, material);
+    }
   }
 }

@@ -11,8 +11,8 @@ export class Particle {
       this.velocity = vec3(0, 5, -5);
       this.force = vec3(0, 0, 0);
       this.acceleration = vec3(0, 0, 0);
-      this.staticFriction = 0.9;
-      this.kineticFriction = 0.8;
+      this.staticFriction = 2;
+      this.kineticFriction = 1.5;
       this.radius = 0.7;
     }
   
@@ -31,42 +31,51 @@ export class Particle {
       this.acceleration = this.force.times(1 / this.mass);
     }
   
-    groundCollision() {
-      const e = this.elasticity;
-      const v = this.viscosity;
-      const mu_s = this.staticFriction;
-      const mu_k = this.kineticFriction
-      const groundNormal = vec3(0, 1, 0); // Points upward on y axis
-      let distance = this.position.dot(groundNormal);
-      let relativeVelocity = this.velocity.dot(groundNormal);
-      let tangentialVelocity = this.velocity.minus(groundNormal.times(relativeVelocity));
+  groundCollision() {
+    const e = this.elasticity;
+    const v = this.viscosity;
+    let mu_s = this.staticFriction * 2;
+    let mu_k = this.kineticFriction * 1.5; 
+    const groundNormal = vec3(0, 1, 0); // Y-axis upward
 
-      // Forces used
-      let spring = groundNormal.times(e * Math.max(distance, 0));
-      let damping = groundNormal.times(v * relativeVelocity);
-      let normal = groundNormal.times(this.force.dot(groundNormal)).times(-1);
-      
-      this.force = this.force.plus(spring.minus(damping));
+    let distance = this.position.dot(groundNormal);
+    let relativeVelocity = this.velocity.dot(groundNormal);
+    let tangentialVelocity = this.velocity.minus(groundNormal.times(relativeVelocity));
 
-      if (distance < 0) {
-        this.position = this.position.plus(groundNormal.times(distance * -1));
+    // Forces
+    let spring = groundNormal.times(e * Math.max(distance, 0));
+    let damping = groundNormal.times(v * relativeVelocity);
+    let normal = groundNormal.times(this.force.dot(groundNormal)).times(-1);
+    
+    this.force = this.force.plus(spring.minus(damping));
+
+    if (distance < 0) {
+        // Correct position
+        this.position = this.position.plus(groundNormal.times(-distance));
         this.velocity = this.velocity.minus(groundNormal.times(relativeVelocity * 1.85));
-        
-        if (tangentialVelocity.norm() > 0) {
-          let tangentialMagnitude = this.force.minus(normal).norm();
-          let normalMagnitude = normal.norm();
 
-          if (tangentialMagnitude < mu_s * normalMagnitude) {
-            let slowdownFactor = tangentialMagnitude / (mu_s * normalMagnitude);
-            this.velocity = this.velocity.times(slowdownFactor);
-            this.acceleration = this.acceleration.times(slowdownFactor);
-          } else {
-            let frictionDirection = tangentialVelocity.normalized().times(-1);
-            this.force = this.force.plus(frictionDirection.times(mu_k * normalMagnitude));
-          }
+        let tangentialSpeed = tangentialVelocity.norm();
+        if (tangentialSpeed > 0) {
+            let normalMagnitude = normal.norm();
+
+            // If the speed is really low, completely stop the ball
+            if (tangentialSpeed < 0.1) {  
+                this.velocity = vec3(0, 0, 0);
+                this.acceleration = vec3(0, 0, 0);
+            } else {
+                // Apply kinetic friction
+                let frictionDirection = tangentialVelocity.normalized().times(-1);
+                let frictionForce = frictionDirection.times(mu_k * normalMagnitude);
+                this.force = this.force.plus(frictionForce);
+
+                // Reduce velocity over time
+                this.velocity = this.velocity.plus(frictionForce.times(0.5)); // Increase slowing effect
+            }
         }
-      }
     }
+}
+
+
 
     backboardCollision() {
       const e = 1;

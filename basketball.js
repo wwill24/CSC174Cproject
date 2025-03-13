@@ -2,6 +2,7 @@ import { tiny, defs } from "./examples/common.js";
 import { Articulated_Human } from "./human.js";
 import { Shape_From_File } from "./examples/obj-file-demo.js";
 import { Particle, ParticleSystem } from "./util.js";
+import { ShootingSpline } from "./human.js";
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
@@ -180,6 +181,8 @@ export const Basketball_base =
         .times(Mat4.scale(4,4,4,0));
 
       this.shapes.rack.draw(caller, this.uniforms, model_transform_rack, this.materials.rack);
+
+      this.shootingSpline.draw(caller, this.uniforms, model_transform_rack, this.materials.rack);
     }
   });
 
@@ -205,39 +208,35 @@ export class Basketball extends Basketball_base {
     /**********************************
      *  Update & Draw the Human
      **********************************/
-    // Get the ball's current position
-    const ball_pos = this.particleSystem.particles[0].position;
+    // // Get the ball's current position
+    // const ball_pos = this.particleSystem.particles[0].position;
     
-    // Get human's current position
-    const human_pos = this.human.root.location_matrix.times(vec4(0,0,0,1));
-    const current_pos = vec3(human_pos[0], 0, human_pos[2]);
+    // // Get human's current position
+    // const human_pos = this.human.root.location_matrix.times(vec4(0,0,0,1));
+    // const current_pos = vec3(human_pos[0], 0, human_pos[2]);
     
-    // Calculate direction to ball
-    const direction = vec3(ball_pos[0] - current_pos[0], 0, ball_pos[2] - current_pos[2]);
-    const distance = Math.sqrt(direction[0] * direction[0] + direction[2] * direction[2]);
-    
-    // Comment out walking behavior
-    /*
-    if (distance > 3) {
-        const normalized_dir = vec3(direction[0]/distance, 0, direction[2]/distance);
-        const speed = 5;
-        const movement = normalized_dir.times(speed * (this.uniforms.animation_delta_time / 1000));
+    // // Calculate direction to ball
+    // const direction = vec3(ball_pos[0] - current_pos[0], 0, ball_pos[2] - current_pos[2]);
+    // const distance = Math.sqrt(direction[0] * direction[0] + direction[2] * direction[2]);
+
+    // if (distance > 3) {
+    //     const normalized_dir = vec3(direction[0]/distance, 0, direction[2]/distance);
+    //     const speed = 5;
+    //     const movement = normalized_dir.times(speed * (this.uniforms.animation_delta_time / 1000));
         
-        // Update human position and orientation
-        const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
-        this.human.root.location_matrix = Mat4.translation(
-            current_pos[0] + movement[0], 
-            7.5,
-            current_pos[2] + movement[2]
-        ).times(Mat4.rotation(angle, 0, 1, 0));
-    }
-    */
+    //     // Update human position and orientation
+    //     const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
+    //     this.human.root.location_matrix = Mat4.translation(
+    //         current_pos[0] + movement[0], 
+    //         7.5,
+    //         current_pos[2] + movement[2]
+    //     ).times(Mat4.rotation(angle, 0, 1, 0));
+    // }
     
-    // Comment out walking animation
     // this.human.updateWalking(t);
 
     // Update shooting animation
-    this.human.updateShooting(t, ball_pos);
+    this.human.updateShooting(t);
 
     // Draw the human
     this.human.draw(caller, this.uniforms, this.materials.plastic);
@@ -264,7 +263,6 @@ export class Basketball extends Basketball_base {
       this.shapes,
       this.materials
     );
-    console.log(this.particleSystem.particles[0].position[2]);
   }
 
   render_controls() {
