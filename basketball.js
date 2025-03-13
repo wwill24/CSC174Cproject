@@ -4,8 +4,14 @@ import { Shape_From_File } from "./examples/obj-file-demo.js";
 import { Particle, ParticleSystem } from "./util.js";
 
 // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
-  tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+
+Object.assign(vec3, {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  subtract: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  scale: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
+  len: (a) => Math.hypot(a[0], a[1], a[2])
+});
 
 export const Basketball_base =
   (defs.Basketball_base = class Basketball_base extends Component {
@@ -210,6 +216,8 @@ export class Basketball extends Basketball_base {
     const direction = vec3(ball_pos[0] - current_pos[0], 0, ball_pos[2] - current_pos[2]);
     const distance = Math.sqrt(direction[0] * direction[0] + direction[2] * direction[2]);
     
+    // Comment out walking behavior
+    /*
     if (distance > 3) {
         const normalized_dir = vec3(direction[0]/distance, 0, direction[2]/distance);
         const speed = 5;
@@ -223,9 +231,14 @@ export class Basketball extends Basketball_base {
             current_pos[2] + movement[2]
         ).times(Mat4.rotation(angle, 0, 1, 0));
     }
+    */
     
-    // Update the human's walking animation
-    this.human.updateWalking(t);
+    // Comment out walking animation
+    // this.human.updateWalking(t);
+
+    // Update shooting animation
+    this.human.updateShooting(t, ball_pos);
+
     // Draw the human
     this.human.draw(caller, this.uniforms, this.materials.plastic);
 

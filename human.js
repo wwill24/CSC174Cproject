@@ -392,6 +392,58 @@ export const Articulated_Human = class Articulated_Human {
   }
 
   // ---------------------------
+  // Shooting Animation
+  // ---------------------------
+  updateShooting(time, ball_pos) {
+    const shooting_frequency = 0.8; 
+    const shooting_phase = (Math.sin(time * shooting_frequency) + 1) / 2; 
+    
+    const gather_target = vec3(
+        ball_pos[0] - 0.2,
+        ball_pos[1] + 0.1, 
+        ball_pos[2] + 0.1  
+    );
+    
+    const release_target = vec3(
+        ball_pos[0] + 0.3,
+        ball_pos[1] + 2.0,
+        ball_pos[2] - 0.1  
+    );
+    
+    // Smoothly interpolate between gather and release positions
+    const shooting_target = vec3(
+        gather_target[0] + (release_target[0] - gather_target[0]) * shooting_phase,
+        gather_target[1] + (release_target[1] - gather_target[1]) * shooting_phase,
+        gather_target[2] + (release_target[2] - gather_target[2]) * shooting_phase
+    );
+
+    this.updateIK(shooting_target);
+    
+    const shoulder_rotation = Math.sin(time * shooting_frequency) * Math.PI / 4 - Math.PI / 4; 
+    this.r_shoulder.update_articulation([
+        0,  
+        shoulder_rotation,  
+        Math.PI / 2 
+    ]);
+
+    // Elbow rotation 
+    const elbow_rotation = (Math.sin(time * shooting_frequency) + 1) * Math.PI / 2; 
+    this.r_elbow.update_articulation([
+        elbow_rotation, 
+        elbow_rotation * 0.5, 
+        0
+    ]);
+
+    // Wrist rotation 
+    const wrist_rotation = Math.sin(time * shooting_frequency) * Math.PI / 3; 
+    this.r_wrist.update_articulation([
+        wrist_rotation,  
+        wrist_rotation * 0.8, 
+        0   
+    ]);
+  }
+
+  // ---------------------------
   // Draw the human model.
   // (Modified to color leg segments green for debugging.)
   // ---------------------------
