@@ -268,20 +268,25 @@ export const Articulated_Human = class Articulated_Human {
     for (let i = 0; i < 3; i++) {
       J[i] = new Array(this.dof);
     }
+
     const original_theta = this.theta.slice();
     const original_position = this.get_end_effector_position();
+
     for (let i = 0; i < this.dof; i++) {
       const delta_theta = 0.01;
       this.theta[i] += delta_theta;
       this.apply_theta();
+
       const perturbed_position = this.get_end_effector_position();
       const delta_position = vec3.subtract(
         perturbed_position,
         original_position
       );
+
       J[0][i] = delta_position[0] / delta_theta;
       J[1][i] = delta_position[1] / delta_theta;
       J[2][i] = delta_position[2] / delta_theta;
+
       this.theta = original_theta.slice();
       this.apply_theta();
     }
@@ -308,19 +313,23 @@ export const Articulated_Human = class Articulated_Human {
 
   _rec_update(arc, matrix) {
     if (arc === null) return;
+
     const globalMatrix = matrix
       .times(arc.location_matrix)
       .times(arc.articulation_matrix);
+
     if (arc.end_effector) {
       const localPos = arc.end_effector.local_position;
       const localPositionVec4 = vec4(localPos[0], localPos[1], localPos[2], 1);
       const globalPositionVec4 = globalMatrix.times(localPositionVec4);
+
       arc.end_effector.global_position = vec3(
         globalPositionVec4[0],
         globalPositionVec4[1],
         globalPositionVec4[2]
       );
     }
+
     for (const child_arc of arc.child_node.children_arcs || []) {
       this._rec_update(child_arc, globalMatrix);
     }
@@ -394,10 +403,7 @@ export const Articulated_Human = class Articulated_Human {
   // ---------------------------
   // Shooting Animation
   // ---------------------------
-  updateShooting(time) {
-
-  }
-
+  updateShooting(time) {}
 
   // ---------------------------
   // Draw the human model.
@@ -420,6 +426,7 @@ export const Articulated_Human = class Articulated_Human {
       const A = arc.articulation_matrix;
       matrix.post_multiply(L.times(A));
       this.matrix_stack.push(matrix.copy());
+
       const node = arc.child_node;
       const T = node.transform_matrix;
       matrix.post_multiply(T);
@@ -541,7 +548,6 @@ class End_Effector {
   }
 }
 
-
 export class ShootingSpline {
   constructor() {
     this.numPoints = 1000;
@@ -549,35 +555,37 @@ export class ShootingSpline {
     for (let i = 0; i <= this.numPoints; i++) {
       let t = i / this.numPoints;
       let pt = this.placePointOnCurve(t);
-      this.points.push(pt)
+      this.points.push(pt);
     }
   }
-  
-  placePointOnCurve(t) {
-    let x = t;  
-    let y = Math.sin((Math.PI / 2) * t);  
-    return vec3(x, y, 0);
-}
 
+  placePointOnCurve(t) {
+    let x = t;
+    let y = Math.sin((Math.PI / 2) * t);
+    return vec3(x, y, 0);
+  }
 
   lerp(a, b, t) {
-    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    return [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t,
+    ];
   }
-  
+
   getPointOnCurve(t) {
     t = t % 1;
     let scaled = t * this.numPoints;
     let index = Math.floor(scaled);
     let p0 = this.points[index];
     let p1 = this.points[(index + 1) % this.points.length];
-    
+
     return this.lerp(p0, p1, scaled - index);
   }
-  
 
   draw(caller, uniforms, board_transform, material) {
     const scaleMatrix = Mat4.scale(0.15, 0.15, 0.15);
-  
+
     for (const pt of this.points) {
       const worldPt = board_transform.times(vec4(...pt, 1));
       const transform = Mat4.translation(...worldPt).times(scaleMatrix);

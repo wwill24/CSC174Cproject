@@ -5,13 +5,77 @@ import { Particle, ParticleSystem } from "./util.js";
 import { ShootingSpline } from "./human.js";
 
 // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
+  tiny;
+
+/*****************************************************
+ *  Spline Class
+ *
+ * This class creates a closed “infinity” spline.
+ * The spline is defined in the board’s local coordinates.
+ * It now uses a Gerono lemniscate to generate a horizontal 8.
+ *****************************************************/
+class Spline {
+  constructor() {
+    // We'll sample 100 points along the spline.
+    this.numSamples = 1000;
+    this.points = [];
+    for (let i = 0; i <= this.numSamples; i++) {
+      let t = i / this.numSamples;
+      let pt = this.getPoint(t);
+      this.points.push(pt);
+    }
+  }
+  // Simulating a shooting motion with a parabolic arc
+  getPoint(t) {
+    let startX = -0.5; // Start near the chest
+    let endX = 0.3; // Extend forward
+    let x = startX + (endX - startX) * t;
+
+    let startY = -0.3; // Hand starts low
+    let peakY = 0.7; // Peak height of the shot
+    let releaseY = 0.5; // Follow-through slightly lower than peak
+
+    // Parabolic arc for the shooting motion
+    let y = (1 - (t - 0.5) ** 2) * (peakY - startY) + startY;
+
+    let startZ = 0; // Close to body
+    let endZ = 0.6; // Extends outward
+    let z = startZ + (endZ - startZ) * t;
+
+    return vec3(x, y, z);
+  }
+  // Linear interpolation between sample points.
+  sample(t) {
+    t = t % 1; // wrap around
+    let scaled = t * this.numSamples;
+    let index = Math.floor(scaled);
+    let frac = scaled - index;
+    let p0 = this.points[index];
+    let p1 = this.points[(index + 1) % this.points.length];
+    return vec3.add(p0, vec3.scale(vec3.subtract(p1, p0), frac));
+  }
+  // Draw the spline as small spheres along the curve.
+  draw(caller, uniforms, board_transform, material) {
+    for (let i = 0; i < this.points.length; i++) {
+      let pt = this.points[i];
+      // Transform the spline point from board-local to world coordinates.
+      let world_pt = board_transform.times(vec4(pt[0], pt[1], pt[2], 1));
+      let transform = Mat4.translation(
+        world_pt[0],
+        world_pt[1],
+        world_pt[2]
+      ).times(Mat4.scale(0.11, 0.11, 0.11));
+      caller.shapes.ball.draw(caller, uniforms, transform, material);
+    }
+  }
+}
 
 Object.assign(vec3, {
   add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
   subtract: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
   scale: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
-  len: (a) => Math.hypot(a[0], a[1], a[2])
+  len: (a) => Math.hypot(a[0], a[1], a[2]),
 });
 
 export const Basketball_base =
@@ -29,7 +93,7 @@ export const Basketball_base =
         ball: new defs.Subdivision_Sphere(4),
         axis: new defs.Axis_Arrows(),
         court: new Shape_From_File("assets/court/court.obj"),
-        rack: new Shape_From_File("assets/rack/racks.obj")
+        rack: new Shape_From_File("assets/rack/racks.obj"),
       };
 
       // *** Materials: ***
@@ -66,8 +130,8 @@ export const Basketball_base =
         ambient: 0.2,
         diffusivity: 1,
         specularity: 1,
-        color: color(0.6, 0.3, 0.1, 1)
-      }
+        color: color(0.6, 0.3, 0.1, 1),
+      };
 
       this.ball_location = vec3(1, 1, 1);
       this.ball_radius = 0.25;
@@ -90,6 +154,11 @@ export const Basketball_base =
         [30, 0, 0], // Right center
         [20, 0, 20], // Close the loop
       ];
+      // Spline for the shooting motion
+      this.shootingSpline = new Spline();
+      // Arm state: first "moving" to pick up the ball, then "drawing" the shooting motion spline.
+      this.armState = "moving";
+      this.spline_t = 0;
     }
 
     render_animation(caller) {
@@ -106,11 +175,7 @@ export const Basketball_base =
         // TODO: you can change the camera as needed.
         // Starter Camera Angle (will use for demo)
         Shader.assign_camera(
-          Mat4.look_at(
-              vec3(0, 20, 30),
-              vec3(0, 12, 0),
-              vec3(0, 1, 0)
-          ),
+          Mat4.look_at(vec3(0, 20, 30), vec3(0, 12, 0), vec3(0, 1, 0)),
           this.uniforms
         );
 
@@ -177,12 +242,18 @@ export const Basketball_base =
       );
 
       const model_transform_rack = Mat4.identity()
-        .times(Mat4.translation(0, 3, 0))
-        .times(Mat4.scale(4,4,4,0));
+        .times(Mat4.translation(5, 3, 0))
+        .times(Mat4.rotation(Math.PI / 2, 0, 1, 0)) // Rotate 90° around Y-axis
+        .times(Mat4.scale(4, 4, 4));
 
-      this.shapes.rack.draw(caller, this.uniforms, model_transform_rack, this.materials.rack);
+      this.shapes.rack.draw(
+        caller,
+        this.uniforms,
+        model_transform_rack,
+        this.materials.rack
+      );
 
-      this.shootingSpline.draw(caller, this.uniforms, model_transform_rack, this.materials.rack);
+      // this.shootingSpline.draw(caller, this.uniforms, model_transform_rack, this.materials.rack);
     }
   });
 
@@ -210,11 +281,11 @@ export class Basketball extends Basketball_base {
      **********************************/
     // // Get the ball's current position
     // const ball_pos = this.particleSystem.particles[0].position;
-    
+
     // // Get human's current position
     // const human_pos = this.human.root.location_matrix.times(vec4(0,0,0,1));
     // const current_pos = vec3(human_pos[0], 0, human_pos[2]);
-    
+
     // // Calculate direction to ball
     // const direction = vec3(ball_pos[0] - current_pos[0], 0, ball_pos[2] - current_pos[2]);
     // const distance = Math.sqrt(direction[0] * direction[0] + direction[2] * direction[2]);
@@ -223,23 +294,20 @@ export class Basketball extends Basketball_base {
     //     const normalized_dir = vec3(direction[0]/distance, 0, direction[2]/distance);
     //     const speed = 5;
     //     const movement = normalized_dir.times(speed * (this.uniforms.animation_delta_time / 1000));
-        
+
     //     // Update human position and orientation
     //     const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
     //     this.human.root.location_matrix = Mat4.translation(
-    //         current_pos[0] + movement[0], 
+    //         current_pos[0] + movement[0],
     //         7.5,
     //         current_pos[2] + movement[2]
     //     ).times(Mat4.rotation(angle, 0, 1, 0));
     // }
-    
+
     // this.human.updateWalking(t);
 
     // Update shooting animation
-    this.human.updateShooting(t);
-
-    // Draw the human
-    this.human.draw(caller, this.uniforms, this.materials.plastic);
+    // this.human.updateShooting(t);
 
     /**********************************
      *  Update & Draw the Basketball
@@ -256,6 +324,37 @@ export class Basketball extends Basketball_base {
         this.sim += step;
       }
     }
+
+    let shot_transform = Mat4.translation(1.5, 5, -2).times(
+      Mat4.scale(1, 10, -4)
+    );
+
+    let target;
+    // if (this.armState === "moving") {
+    //   // Target is the starting point of the spline (t = 0) on the board.
+    //   let splineStart = this.spline.sample(0);
+    //   let worldPt = shot_transform.times(
+    //     vec4(splineStart[0], splineStart[1], splineStart[2], 1)
+    //   );
+    //   target = [worldPt[0], worldPt[1], worldPt[2]];
+    //   // When the hand nears the target, switch to drawing mode.
+    //   let handPos = this.human.get_end_effector_position();
+    //   if (vec3.len(vec3.subtract(target, handPos)) < 0.1) {
+    //     this.armState = "drawing";
+    //   }
+    // } else {
+    // "drawing" state: follow the spline.
+    this.spline_t += 0.02; // adjust speed as needed (reduced from 0.001 to 0.0001)
+    let splinePt = this.shootingSpline.sample(this.spline_t);
+    let worldPt = shot_transform.times(
+      vec4(splinePt[0], splinePt[1], splinePt[2], 1)
+    );
+    target = [worldPt[0], worldPt[1], worldPt[2]];
+    // }
+    // Update the human's right arm IK to move its hand toward the target.
+    this.human.updateIK(target);
+    // Draw the human
+    this.human.draw(caller, this.uniforms, this.materials.plastic);
 
     this.particleSystem.draw(
       caller,
