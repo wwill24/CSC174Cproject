@@ -98,6 +98,7 @@ export const Articulated_Human = class Articulated_Human {
     this.torso_node.children_arcs.push(this.l_shoulder);
 
     let ll_arm_transform = Mat4.scale(1, 0.2, 0.2);
+    ll_arm_transform.pre_multiply(Mat4.translation(-1, 0, 0));
     this.ll_arm_node = new Node("ll_arm", sphere_shape, ll_arm_transform);
     const l_elbow_location = Mat4.translation(-2.4, 0, 0);
     this.l_elbow = new Arc(
