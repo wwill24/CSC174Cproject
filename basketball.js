@@ -268,29 +268,33 @@ export class Basketball extends Basketball_base {
   }
 
   shootBall() {
-    // Get the release position from the human's hand.
-    let releasePos = this.human.get_end_effector_position(); // returns a vec3
+    let releasePos = this.human.get_end_effector_position(); // vec3
 
     let target = [0, 12, -38];
-    let T = 1.5; // Flight time
+    let g = -9.81;  
 
-    // Gravity vector.
-    let g = [0, -9.81, 0];
+    // Reduce arc by increasing divisor 
+    let horizontalDistance = Math.sqrt(
+        (target[0] - releasePos[0]) ** 2 + 
+        (target[2] - releasePos[2]) ** 2
+    );
+    let T = horizontalDistance / 10.5;
 
-    
-    let displacement = vec3.subtract(target, releasePos);
-    let gravityCorrection = vec3.scale(g, 0.66 * T * T); // hardcoded to shoot properly
-    // Compute required initial velocity: (displacement - gravityCorrection) / T.
-    let v0 = vec3.scale(vec3.subtract(displacement, gravityCorrection), 1 / T);
-    let v0_vec3 = vec3(v0[0], v0[1], v0[2]);
+    // Solve for Initial Velocities
+    let v0x = (target[0] - releasePos[0]) / T;
+    let v0z = (target[2] - releasePos[2]) / T;
+    let v0y = (target[1] - releasePos[1] - 0.5 * g * T * T) / T;
 
-    // Set the ball's particle state.
+    let v0 = vec3(v0x, v0y, v0z); // Final velocity vector
+
+    // Apply to the ball
     let ballParticle = this.particleSystem.particles[0];
-    
     ballParticle.position = releasePos;
     
-    return v0_vec3;
-  }
+    return v0;
+}
+
+
 
   render_animation(caller) {
     super.render_animation(caller);
