@@ -150,7 +150,7 @@ export const Basketball_base =
       // Creating basketball
       this.particleSystem = new ParticleSystem();
       // // drawing the particle (basketball)
-      // this.particleSystem.createParticles(1);
+      this.particleSystem.createParticles(1);
       // Creating a human instance
       this.human = new Articulated_Human();
       // Control points for spline path for human to walk.
