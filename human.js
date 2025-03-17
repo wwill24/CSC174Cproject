@@ -87,6 +87,7 @@ export const Articulated_Human = class Articulated_Human {
     // ---------------------------
     let lu_arm_transform = Mat4.scale(1.2, 0.2, 0.2);
     lu_arm_transform.pre_multiply(Mat4.translation(-1.2, 0, 0));
+    lu_arm_transform.pre_multiply(Mat4.rotation(Math.PI / 4, 1, 0, 0));
     this.lu_arm_node = new Node("lu_arm", sphere_shape, lu_arm_transform);
     const l_shoulder_location = Mat4.translation(-0.6, 2, 0);
     this.l_shoulder = new Arc(
