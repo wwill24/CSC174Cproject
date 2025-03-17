@@ -472,5 +472,25 @@ export class Basketball extends Basketball_base {
         this.pickUpBall();
       }
     });
+
+    this.new_line();
+
+    this.key_triggered_button("Velocity 1 (Diagonal)", ["9"], function () {
+        // Reset particle system with the first velocity pattern
+        this.particleSystem.reset();
+        this.particleSystem.createParticles(1);
+        this.particleSystem.particles[0].velocity = vec3(
+            -10 * Math.sin(Math.PI / 4),
+            0,
+            -10 * Math.cos(Math.PI / 4)
+        );
+    });
+
+    this.key_triggered_button("Velocity 2 (Up-Forward)", ["0"], function () {
+        // Reset particle system with the second velocity pattern
+        this.particleSystem.reset();
+        this.particleSystem.createParticles(1);
+        this.particleSystem.particles[0].velocity = vec3(0, 5, -5);
+    });
   }
 }
