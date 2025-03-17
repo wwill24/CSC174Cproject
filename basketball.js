@@ -266,7 +266,7 @@ export class Basketball extends Basketball_base {
     this.sim = 0;
     this.render = true;
   }
-    // In your Basketball class, add a function to shoot the ball:
+
   shootBall() {
     // Get the release position from the human's hand.
     let releasePos = this.human.get_end_effector_position(); // returns a vec3
@@ -277,10 +277,9 @@ export class Basketball extends Basketball_base {
     // Gravity vector.
     let g = [0, -9.81, 0];
 
-    // Compute displacement: target - release.
+    
     let displacement = vec3.subtract(target, releasePos);
-    // Compute gravity correction: 0.5 * g * T^2.
-    let gravityCorrection = vec3.scale(g, 0.66 * T * T);
+    let gravityCorrection = vec3.scale(g, 0.66 * T * T); // hardcoded to shoot properly
     // Compute required initial velocity: (displacement - gravityCorrection) / T.
     let v0 = vec3.scale(vec3.subtract(displacement, gravityCorrection), 1 / T);
     let v0_vec3 = vec3(v0[0], v0[1], v0[2]);
@@ -290,7 +289,6 @@ export class Basketball extends Basketball_base {
     
     ballParticle.position = releasePos;
     
-      
     return v0_vec3;
   }
 
@@ -364,20 +362,6 @@ export class Basketball extends Basketball_base {
     );
 
     let target;
-    // if (this.armState === "moving") {
-    //   // Target is the starting point of the spline (t = 0) on the board.
-    //   let splineStart = this.spline.sample(0);
-    //   let worldPt = shot_transform.times(
-    //     vec4(splineStart[0], splineStart[1], splineStart[2], 1)
-    //   );
-    //   target = [worldPt[0], worldPt[1], worldPt[2]];
-    //   // When the hand nears the target, switch to drawing mode.
-    //   let handPos = this.human.get_end_effector_position();
-    //   if (vec3.len(vec3.subtract(target, handPos)) < 0.1) {
-    //     this.armState = "drawing";
-    //   }
-    // } else {
-    // "drawing" state: follow the spline.
     let v0_vec3;
     if(this.count){
       this.spline_t += 0.02; // adjust speed as needed (reduced from 0.001 to 0.0001)
@@ -395,9 +379,9 @@ export class Basketball extends Basketball_base {
       vec4(splinePt[0], splinePt[1], splinePt[2], 1)
     );
     target = [worldPt[0], worldPt[1], worldPt[2]];
-    // }
-    // Update the human's right arm IK to move its hand toward the target.
+    
     this.human.updateIK(target);
+    
     // Draw the human
     this.human.draw(caller, this.uniforms, this.materials.plastic);
 
