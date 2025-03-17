@@ -81,7 +81,6 @@ export const Basketball_base =
       this.hover = this.swarm = false;
       this.time = 0;
       this.isMoving = true;
-      this.shootingSpline = new ShootingSpline();
       this.count = false;
       this.count_tracker = 1;
       this.walk = false;
@@ -153,7 +152,7 @@ export const Basketball_base =
         [20, 0, 20], // Close the loop
       ];
       // Spline for the shooting motion
-      this.shootingSpline = new Spline();
+      this.shootingSpline = new ShootingSpline();
       // Arm state: first "moving" to pick up the ball, then "drawing" the shooting motion spline.
       this.armState = "moving";
       this.spline_t = 0;
@@ -263,6 +262,8 @@ export class Basketball extends Basketball_base {
   }
 
   shootBall() {
+    console.log("shoulder: ", this.human.r_shoulder);
+    this.shootingSpline.updateSpline(this.human.r_shoulder);
     let releasePos = this.human.get_end_effector_position(); // vec3
 
     let target = [0, 12, -38];
@@ -289,8 +290,6 @@ export class Basketball extends Basketball_base {
     
     return v0;
 }
-
-
 
   walking(t){
     // // Get the ball's current position
@@ -345,9 +344,6 @@ export class Basketball extends Basketball_base {
       this.walking(t);
     }
 
-    // Update shooting animation
-    //this.human.updateShooting(t);
-
     // Draw the human
     this.human.draw(caller, this.uniforms, this.materials.plastic);
 
@@ -379,6 +375,7 @@ export class Basketball extends Basketball_base {
       if(this.spline_t > this.count_tracker - 0.9){
         this.particleSystem.particles[0].velocity = v0_vec3;
       }
+      // this.shootingSpline.update(t);
       let splinePt = this.shootingSpline.sample(this.spline_t);
       let worldPt = shot_transform.times(
         vec4(splinePt[0], splinePt[1], splinePt[2], 1)
@@ -414,7 +411,7 @@ export class Basketball extends Basketball_base {
       this.count = true;
     } );
     this.key_triggered_button( "Walk", [ "y" ], function() {
-      this.walk = true;
+      this.walk = !this.walk;
     } );
   }
 }
