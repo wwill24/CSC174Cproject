@@ -262,11 +262,30 @@ export class Basketball extends Basketball_base {
   }
 
   shootBall() {
+    let target = [0, 12, -38];  // The basket position
+
+    // Get human's current position
+    const human_pos = this.human.root.location_matrix.times(vec4(0, 0, 0, 1));
+    const rootPos = vec3(human_pos[0], 0, human_pos[2]);
+
+    // Calculate direction towards the target
+    const direction = vec3(target[0] - rootPos[0], 0, target[2] - rootPos[2]);
+    const distance = Math.sqrt(direction[0] ** 2 + direction[2] ** 2);
+
+    if (distance > 0) {
+        const normalized_dir = vec3(direction[0] / distance, 0, direction[2] / distance);
+        const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
+
+        // Rotate human to face the target before doing anything else
+        this.human.root.location_matrix = Mat4.translation(
+            rootPos[0], 7.5, rootPos[2]
+        ).times(Mat4.rotation(angle, 0, 1, 0));
+    }
+
     this.human.get_right_shoulder_position();
     this.shootingSpline.updateSpline(this.human);
     let releasePos = this.human.get_end_effector_position(); // vec3
 
-    let target = [0, 12, -38];
     let g = -9.81;  
 
     // Reduce arc by increasing divisor 
