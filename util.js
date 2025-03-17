@@ -11,8 +11,8 @@ export class Particle {
       this.velocity = vec3(0, 5, -5);
       this.force = vec3(0, 0, 0);
       this.acceleration = vec3(0, 0, 0);
-      this.staticFriction = 2;
-      this.kineticFriction = 1.5;
+      this.staticFriction = 0.9;
+      this.kineticFriction = 0.8;
       this.radius = 0.7;
     }
   
@@ -52,12 +52,11 @@ export class Particle {
     if (distance < 0) {
         // Correct position
         this.position = this.position.plus(groundNormal.times(-distance));
-        this.velocity = this.velocity.minus(groundNormal.times(relativeVelocity * 1.85));
+        this.velocity = this.velocity.minus(groundNormal.times(relativeVelocity * 1.80));
 
-        let tangentialSpeed = tangentialVelocity.norm();
+        let tangentialSpeed = this.velocity.norm();
         if (tangentialSpeed > 0) {
             let normalMagnitude = normal.norm();
-
             // If the speed is really low, completely stop the ball
             if (tangentialSpeed < 0.1) {  
                 this.velocity = vec3(0, 0, 0);
@@ -69,7 +68,8 @@ export class Particle {
                 this.force = this.force.plus(frictionForce);
 
                 // Reduce velocity over time
-                this.velocity = this.velocity.plus(frictionForce.times(0.5)); // Increase slowing effect
+                this.velocity[0] *= this.staticFriction; 
+                this.velocity[2] *= this.staticFriction;
             }
         }
     }
