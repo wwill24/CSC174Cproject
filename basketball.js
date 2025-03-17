@@ -280,8 +280,6 @@ export class Basketball extends Basketball_base {
     let v0x = (target[0] - releasePos[0]) / T;
     let v0z = (target[2] - releasePos[2]) / T;
     let v0y = (target[1] - releasePos[1] - 0.5 * g * T * T) / T;
-
-
     let v0 = vec3(v0x, v0y, v0z); // Final velocity vector
 
     // Apply to the ball

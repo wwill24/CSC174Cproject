@@ -612,8 +612,7 @@ export class ShootingSpline {
     rootMatrix = rootMatrix.times(rotationMatrix);
   
     // Transform the shoulder position using rootMatrix to get the correct offset
-    const shoulderOffset = rootMatrix.times(vec3(startPos[0], startPos[1], startPos[2]));
-    console.log("shoulderOffset", shoulderOffset);
+    const shoulderOffset = rootMatrix.times(vec4(startPos[0], startPos[1], startPos[2], 1));
   
     // Define trajectory parameters
     const peakHeight = 3; 
@@ -628,13 +627,13 @@ export class ShootingSpline {
       let localZ = 0;
   
       // Transform using the rotated root articulation matrix
-      let worldPoint = rootMatrix.times(vec3(localX, localY, localZ));
+      let worldPoint = rootMatrix.times(vec4(localX, localY, localZ, 1));
   
       // Adjust the spline relative to the human's root position and shoulder offset
       this.points.push(vec3(
-        worldPoint[0] + current_pos[0] + shoulderOffset[0],   
-        worldPoint[1] + current_pos[1] + shoulderOffset[1],  
-        worldPoint[2] + current_pos[2] + shoulderOffset[2]   
+        worldPoint[0] + current_pos[0] + shoulderOffset[0],   // Adjust X
+        worldPoint[1] + current_pos[1] + shoulderOffset[1],   // Adjust Y
+        worldPoint[2] + current_pos[2] + shoulderOffset[2]    // Adjust Z
       ));
     }
   }
