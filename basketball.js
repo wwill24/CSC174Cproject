@@ -11,7 +11,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
  *  Spline Class
  *
  * This class creates a parabolic "shooting motion" spline.
- * The spline is defined in the board’s local coordinates.
+ * The spline is defined in the board's local coordinates.
  *****************************************************/
 class Spline {
   constructor(human) {
@@ -40,7 +40,7 @@ class Spline {
     let x = startX + (endX - startX) * t;
 
     let startY = human_pos[1] - 2; // Hand starts low
-    let peakY = human_pos[1] + 6; // Peak height of the shot
+    let peakY = human_pos[1] + 5.5; // Peak height of the shot
     let releaseY = 0.5; // Follow-through slightly lower than peak
 
     // Parabolic arc for the shooting motion
@@ -258,6 +258,29 @@ export class Basketball extends Basketball_base {
     this.spline_t = 0;
     this.ball_released = false;
     this.targetRim = [0, 12, -38]; // The basket position
+    this.ball_picked_up = false;  
+  }
+
+  pickUpBall() {
+    // Get the ball's current position
+    const ball_pos = this.particleSystem.particles[0].position;
+    
+    // Get human's current position
+    const human_pos = this.human.root.location_matrix.times(vec4(0, 0, 0, 1));
+    const current_pos = vec3(human_pos[0], human_pos[1], human_pos[2]);
+    
+    // Calculate distance to ball
+    const distance = Math.sqrt(
+        (ball_pos[0] - current_pos[0]) ** 2 + 
+        (ball_pos[2] - current_pos[2]) ** 2
+    );
+    
+    // If close enough, pick up the ball
+    if (distance <= 5) {
+        this.ball_picked_up = true;
+        // Stop any existing ball motion
+        this.particleSystem.particles[0].velocity = vec3(0, 0, 0);
+    }
   }
 
   faceTargetRim() {
@@ -308,7 +331,7 @@ export class Basketball extends Basketball_base {
       direction[0] * direction[0] + direction[2] * direction[2]
     );
 
-    if (distance > 3) {
+    if (distance > 4) {
       const normalized_dir = vec3(
         direction[0] / distance,
         0,
@@ -353,28 +376,39 @@ export class Basketball extends Basketball_base {
 
     let target;
     let g = -9.81;
+
+    // If ball is picked up, keep it in hand position
+    if (this.ball_picked_up && !this.shoot_ball) {
+      const hand_pos = this.human.get_end_effector_position();
+      this.particleSystem.particles[0].position = hand_pos;
+      // Update IK to keep hand on ball
+      this.human.updateIK(hand_pos);
+    }
+
     if (this.shoot_ball) {
+      // Only allow shooting if ball is picked up
+      if (!this.ball_picked_up) {
+        this.shoot_ball = false;
+        return;
+      }
+
       // Make human face the rim
       this.faceTargetRim();
 
-      // Recalculate shooting spline
+      // Rest of the shooting logic
       this.shootingSpline.updateSpline();
-
-      this.spline_t += 0.02; // adjust speed as needed (reduced from 0.001 to 0.0001)
+      this.spline_t += 0.02;
       let splinePt = this.shootingSpline.sample(this.spline_t);
       target = vec3(splinePt[0], splinePt[1], splinePt[2]);
-      // }
-      // Update the human's right arm IK to move its hand toward the target.
+      
       this.human.updateIK(target);
-      if (!this.ball) {
-        this.particleSystem.createParticles(1);
-        this.ball = this.particleSystem.particles[0];
-      }
+      
       if (this.spline_t < 0.4) {
         // Ball stays in the hand before release
-        this.ball.position = target;
+        this.particleSystem.particles[0].position = target;
       } else if (this.spline_t > 0.96) {
         this.shoot_ball = false;
+        this.ball_picked_up = false;  // Ball is no longer in hand
       } else if (!this.ball_released) {
         this.ball_released = true;
         let releasePos = vec3(target[0], target[1], target[2]);
@@ -384,7 +418,7 @@ export class Basketball extends Basketball_base {
           (this.targetRim[0] - releasePos[0]) ** 2 +
             (this.targetRim[2] - releasePos[2]) ** 2
         );
-        let T = horizontalDist / 10.5; // Assuming horizontal speed ~10.5m/s
+        let T = horizontalDist / 10.5;
 
         // Solve for Initial Velocities
         let v0x = (this.targetRim[0] - releasePos[0]) / T;
@@ -392,7 +426,7 @@ export class Basketball extends Basketball_base {
         let v0y = (this.targetRim[1] - releasePos[1] - 0.5 * g * T * T) / T; // g[1] is gravity's y component
 
         // Set the initial properties of the ball (mass, position, velocity)
-        this.ball.setProperties(10, releasePos, vec3(v0x, v0y, v0z)); // Assuming mass is 1 unit
+        this.particleSystem.particles[0].setProperties(10, releasePos, vec3(v0x, v0y, v0z)); // Assuming mass is 1 unit
       }
     } else {
       this.particleSystem.update();
@@ -420,15 +454,43 @@ export class Basketball extends Basketball_base {
     this.new_line();
 
     this.key_triggered_button("Shoot", ["t"], function () {
-      this.particleSystem.reset();
-      this.ball = null;
-      this.spline_t = 0;
-      this.ball_released = false;
-      this.shoot_ball = true;
+      if (this.ball_picked_up) {
+        // this.particleSystem.reset();
+        // this.ball = null;
+        this.spline_t = 0;
+        this.ball_released = false;
+        this.shoot_ball = true;
+      }
     });
 
     this.key_triggered_button("Walk", ["y"], function () {
       this.walk = !this.walk;
+    });
+
+    this.key_triggered_button("Pick Up", ["u"], function () {
+      if (!this.shoot_ball) {  // Only allow pickup if not shooting
+        this.pickUpBall();
+      }
+    });
+
+    this.new_line();
+
+    this.key_triggered_button("Velocity 1 (Diagonal)", ["9"], function () {
+        // Reset particle system with the first velocity pattern
+        this.particleSystem.reset();
+        this.particleSystem.createParticles(1);
+        this.particleSystem.particles[0].velocity = vec3(
+            -10 * Math.sin(Math.PI / 4),
+            0,
+            -10 * Math.cos(Math.PI / 4)
+        );
+    });
+
+    this.key_triggered_button("Velocity 2 (Up-Forward)", ["0"], function () {
+        // Reset particle system with the second velocity pattern
+        this.particleSystem.reset();
+        this.particleSystem.createParticles(1);
+        this.particleSystem.particles[0].velocity = vec3(0, 5, -5);
     });
   }
 }
