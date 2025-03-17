@@ -7,11 +7,11 @@ export class Particle {
     constructor() {
       this.mass = 1;
       this.position = vec3(0, 17, -30);
-      // this.velocity = vec3( -10* Math.sin(Math.PI / 4), 0, -10 * Math.cos(Math.PI / 4));
-      this.velocity = vec3(0, 5, -5);
+      this.velocity = vec3( -10* Math.sin(Math.PI / 4), 0, -10 * Math.cos(Math.PI / 4));
+  //     this.velocity = vec3(0, 5, -5);
       this.force = vec3(0, 0, 0);
       this.acceleration = vec3(0, 0, 0);
-      this.staticFriction = 0.9;
+      this.staticFriction = 0.92;
       this.kineticFriction = 0.8;
       this.radius = 0.7;
     }
