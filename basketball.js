@@ -27,6 +27,7 @@ class Spline {
     }
   }
   // Simulating a shooting motion with a parabolic arc
+  // In Spline class:
   getPoint(t) {
     let startX = -0.5; // Start near the chest
     let endX = 0.3; // Extend forward
@@ -45,6 +46,7 @@ class Spline {
 
     return vec3(x, y, z);
   }
+
   // Linear interpolation between sample points.
   sample(t) {
     t = t % 1; // wrap around
@@ -87,6 +89,9 @@ export const Basketball_base =
       this.hover = this.swarm = false;
       this.time = 0;
       this.isMoving = true;
+      this.count = false;
+      this.count_tracker = 1;
+      this.walk = false;
 
       this.shapes = {
         box: new defs.Cube(),
@@ -155,7 +160,7 @@ export const Basketball_base =
         [20, 0, 20], // Close the loop
       ];
       // Spline for the shooting motion
-      this.shootingSpline = new Spline();
+      this.shootingSpline = new ShootingSpline();
       // Arm state: first "moving" to pick up the ball, then "drawing" the shooting motion spline.
       this.armState = "moving";
       this.spline_t = 0;
@@ -246,6 +251,101 @@ export class Basketball extends Basketball_base {
     this.ball = null;
     this.spline_t = 0;
     this.ball_released = false;
+  }
+
+  walking(t) {
+    // // Get the ball's current position
+    const ball_pos = this.particleSystem.particles[0].position;
+
+    // Get human's current position
+    const human_pos = this.human.root.location_matrix.times(vec4(0, 0, 0, 1));
+    const current_pos = vec3(human_pos[0], 0, human_pos[2]);
+
+    // Calculate direction to ball
+    const direction = vec3(
+      ball_pos[0] - current_pos[0],
+      0,
+      ball_pos[2] - current_pos[2]
+    );
+    const distance = Math.sqrt(
+      direction[0] * direction[0] + direction[2] * direction[2]
+    );
+
+    if (distance > 3) {
+      const normalized_dir = vec3(
+        direction[0] / distance,
+        0,
+        direction[2] / distance
+      );
+      const speed = 5;
+      const movement = normalized_dir.times(
+        speed * (this.uniforms.animation_delta_time / 1000)
+      );
+
+      // Update human position and orientation
+      const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
+      this.human.root.location_matrix = Mat4.translation(
+        current_pos[0] + movement[0],
+        7.5,
+        current_pos[2] + movement[2]
+      ).times(Mat4.rotation(angle, 0, 1, 0));
+    } else {
+      this.walk = false;
+    }
+
+    this.human.updateWalking(t);
+  }
+
+  shootBall() {
+    let target = [0, 12, -38]; // The basket position
+
+    // Get human's current position
+    const human_pos = this.human.root.location_matrix.times(vec4(0, 0, 0, 1));
+    const rootPos = vec3(human_pos[0], 0, human_pos[2]);
+
+    // Calculate direction towards the target
+    const direction = vec3(target[0] - rootPos[0], 0, target[2] - rootPos[2]);
+    const distance = Math.sqrt(direction[0] ** 2 + direction[2] ** 2);
+
+    if (distance > 0) {
+      const normalized_dir = vec3(
+        direction[0] / distance,
+        0,
+        direction[2] / distance
+      );
+      const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
+
+      // Rotate human to face the target before doing anything else
+      this.human.root.location_matrix = Mat4.translation(
+        rootPos[0],
+        7.5,
+        rootPos[2]
+      ).times(Mat4.rotation(angle, 0, 1, 0));
+    }
+
+    this.human.get_right_shoulder_position();
+    this.shootingSpline.updateSpline(this.human);
+    let releasePos = this.human.get_end_effector_position(); // vec3
+
+    let g = -9.81;
+
+    // Reduce arc by increasing divisor
+    let horizontalDistance = Math.sqrt(
+      (target[0] - releasePos[0]) ** 2 + (target[2] - releasePos[2]) ** 2
+    );
+    let T = horizontalDistance / 10.5;
+
+    // Solve for Initial Velocities
+    let v0x = (target[0] - releasePos[0]) / T;
+    let v0z = (target[2] - releasePos[2]) / T;
+    let v0y = (target[1] - releasePos[1] - 0.5 * g * T * T) / T;
+    let v0 = vec3(v0x, v0y, v0z); // Final velocity vector
+
+    // Apply to the ball
+    let ballParticle = this.particleSystem.particles[0];
+    ballParticle.position = releasePos;
+
+    return v0;
   }
 
   walking(t) {

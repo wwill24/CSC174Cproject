@@ -221,6 +221,13 @@ export const Articulated_Human = class Articulated_Human {
     );
     this.r_wrist.end_effector = this.end_effector;
 
+    this.right_shoulder_position = new End_Effector(
+      "right_shoulder_position",
+      this.r_shoulder,
+      vec4(0, 0, 0, 1)
+    );
+    this.r_shoulder.end_effector = this.right_shoulder_position;
+
     // Retain IK DOF for the arm (if needed)
     this.dof = 7;
     this.Jacobian = null;
@@ -307,6 +314,13 @@ export const Articulated_Human = class Articulated_Human {
     this.matrix_stack = [];
     this._rec_update(this.root, Mat4.identity());
     const v = this.end_effector.global_position;
+    return vec3(v[0], v[1], v[2]);
+  }
+
+  get_right_shoulder_position() {
+    this.matrix_stack = [];
+    this._rec_update(this.r_shoulder, Mat4.identity());
+    const v = this.right_shoulder_position.global_position;
     return vec3(v[0], v[1], v[2]);
   }
 
@@ -398,12 +412,7 @@ export const Articulated_Human = class Articulated_Human {
       armAmplitude * stepCycle, // Left arm moves forward when left leg moves back
     ]);
   }
-
-  // ---------------------------
-  // Shooting Animation
-  // ---------------------------
-  updateShooting(time) {}
-
+  
   // ---------------------------
   // Draw the human model.
   // (Modified to color leg segments green for debugging.)
@@ -549,45 +558,96 @@ class End_Effector {
 
 export class ShootingSpline {
   constructor() {
-    this.numPoints = 1000;
+    // We'll sample 100 points along the spline.
+    this.numSamples = 1000;
     this.points = [];
-    for (let i = 0; i <= this.numPoints; i++) {
-      let t = i / this.numPoints;
-      let pt = this.placePointOnCurve(t);
+    for (let i = 0; i <= this.numSamples; i++) {
+      let t = i / this.numSamples;
+      let pt = this.getPoint(t);
       this.points.push(pt);
     }
   }
-
-  placePointOnCurve(t) {
-    let x = t;
-    let y = Math.sin((Math.PI / 2) * t);
-    return vec3(x, y, 0);
+  // Simulating a shooting motion with a parabolic arc
+  // In Spline class:
+  getPoint(t) {
+    // These numbers now define a relative offset from the release point.
+    let offsetX = -0.5 + (0.3 + 0.5) * t;  // Moves from -0.5 to +0.3 relative to the hand.
+    // A parabolic arc in Y: starting low, rising to a peak, then falling a little.
+    let startY = -0.3, peakY = 0.7;
+    let offsetY = (1 - (t - 0.5) ** 2) * (peakY - startY) + startY;
+    let offsetZ = 0.6 * t;  // Extends forward from 0 to 0.6.
+    
+    return vec3(offsetX, offsetY, offsetZ);
   }
 
-  lerp(a, b, t) {
-    return [
-      a[0] + (b[0] - a[0]) * t,
-      a[1] + (b[1] - a[1]) * t,
-      a[2] + (b[2] - a[2]) * t,
-    ];
-  }
-
-  getPointOnCurve(t) {
-    t = t % 1;
-    let scaled = t * this.numPoints;
+  // Linear interpolation between sample points.
+  sample(t) {
+    t = t % 1; // wrap around
+    let scaled = t * this.numSamples;
     let index = Math.floor(scaled);
+    let frac = scaled - index;
     let p0 = this.points[index];
     let p1 = this.points[(index + 1) % this.points.length];
-
-    return this.lerp(p0, p1, scaled - index);
+    return vec3.add(p0, vec3.scale(vec3.subtract(p1, p0), frac));
   }
 
-  draw(caller, uniforms, board_transform, material) {
-    const scaleMatrix = Mat4.scale(0.15, 0.15, 0.15);
+  updateSpline(human) {
+    // Clear previous spline
+    this.points = [];
+  
+    // Get the human's world position from the root matrix
+    const human_pos = human.root.location_matrix.times(vec4(0, 0, 0, 1));
+    const current_pos = vec3(human_pos[0], human_pos[1], human_pos[2]);
+  
+    // Get the right shoulder's position
+    const r_shoulder = human.r_shoulder;
+    const startPos = r_shoulder.end_effector.global_position;
 
-    for (const pt of this.points) {
-      const worldPt = board_transform.times(vec4(...pt, 1));
-      const transform = Mat4.translation(...worldPt).times(scaleMatrix);
+    // Get the root's articulation matrix
+    let rootMatrix = human.root.articulation_matrix;
+  
+    // Apply pi/2 rotation on the XZ plane 
+    const rotationMatrix = Mat4.rotation(Math.PI / 2, 0, 1, 0);
+    rootMatrix = rootMatrix.times(rotationMatrix);
+  
+    // Transform the shoulder position using rootMatrix to get the correct offset
+    const shoulderOffset = rootMatrix.times(vec4(startPos[0], startPos[1], startPos[2], 1));
+  
+    // Define trajectory parameters
+    const peakHeight = 3; 
+    const totalDistance = 4;
+  
+    for (let i = 0; i <= this.numSamples; i++) {
+      let t = i / this.numSamples;
+  
+      // Compute sine arc relative to the right shoulder
+      let localX = totalDistance * t;
+      let localY = peakHeight * Math.sin((Math.PI / 2) * t);
+      let localZ = 0;
+  
+      // Transform using the rotated root articulation matrix
+      let worldPoint = rootMatrix.times(vec4(localX, localY, localZ, 1));
+  
+      // Adjust the spline relative to the human's root position and shoulder offset
+      this.points.push(vec3(
+        worldPoint[0] + current_pos[0] + shoulderOffset[0],   // Adjust X
+        worldPoint[1] + current_pos[1] + shoulderOffset[1],   // Adjust Y
+        worldPoint[2] + current_pos[2] + shoulderOffset[2]    // Adjust Z
+      ));
+    }
+  }
+
+  // Draw the spline as small spheres along the curve.
+  draw(caller, uniforms, board_transform, material) {
+    for (let i = 0; i < this.points.length; i++) {
+      let pt = this.points[i];
+      // Transform the spline point from board-local to world coordinates.
+      let world_pt = board_transform.times(vec4(pt[0], pt[1], pt[2], 1));
+      let transform = Mat4.translation(
+        world_pt[0],
+        world_pt[1],
+        world_pt[2]
+      ).times(Mat4.scale(0.11, 0.11, 0.11));
       caller.shapes.ball.draw(caller, uniforms, transform, material);
     }
   }
