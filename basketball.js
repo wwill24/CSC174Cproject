@@ -39,15 +39,15 @@ class Spline {
     let endX = human_pos[0] + 1.5; // Extend forward
     let x = startX + (endX - startX) * t;
 
-    let startY = human_pos[1] - 6; // Hand starts low
+    let startY = human_pos[1] - 2; // Hand starts low
     let peakY = human_pos[1] + 6; // Peak height of the shot
     let releaseY = 0.5; // Follow-through slightly lower than peak
 
     // Parabolic arc for the shooting motion
-    let y = (1 - (t - 0.5) ** 2) * (peakY - startY) + startY;
+    let y = startY + Math.sin((t * Math.PI) / 2) * (peakY - startY);
 
-    let startZ = human_pos[2] - 1.5; // Close to body
-    let endZ = human_pos[2] - 3; // Extends outward
+    let startZ = human_pos[2] - 2; // Close to body
+    let endZ = human_pos[2] - 3.5; // Extends outward
     let z = startZ + (endZ - startZ) * t;
 
     return vec3(x, y, z);
