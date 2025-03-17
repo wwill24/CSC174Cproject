@@ -13,3 +13,8 @@ Basketball Court from SketchFabs (creator: Klieg3D)
 Daniel Teo
 William Wu
 John Lee
+
+### Axis
+x: horizontal (right/left)
+y: vertical (up/down)
+z: forward/backward
