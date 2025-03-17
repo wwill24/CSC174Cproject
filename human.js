@@ -311,19 +311,17 @@ export const Articulated_Human = class Articulated_Human {
     return x.toArray();
   }
 
-  get_right_shoulder_position() {
-    this.matrix_stack = [];
-    this._rec_update(this.r_shoulder, Mat4.identity());
-    console.log("r_shoulder", this.r_shoulder);
-    const v = this.r_shoulder.global_position;
-    console.log("v", v);
-    return vec3(v[0], v[1], v[2]);
-  }
-
   get_end_effector_position() {
     this.matrix_stack = [];
     this._rec_update(this.root, Mat4.identity());
     const v = this.end_effector.global_position;
+    return vec3(v[0], v[1], v[2]);
+  }
+
+  get_right_shoulder_position() {
+    this.matrix_stack = [];
+    this._rec_update(this.r_shoulder, Mat4.identity());
+    const v = this.r_shoulder.end_effector.global_position;
     return vec3(v[0], v[1], v[2]);
   }
 
@@ -601,6 +599,7 @@ export class ShootingSpline {
     // Get the starting position from the right shoulder
     const startPos = r_shoulder.end_effector.global_position;
     const shoulderMatrix = r_shoulder.articulation_matrix;
+    console.log("shoulderMatrix", shoulderMatrix);
   
     // Define trajectory parameters
     const peakHeight = 0.7; // Adjust this for a natural arc
@@ -610,7 +609,6 @@ export class ShootingSpline {
       let t = i / this.numSamples;
   
       // Compute parabolic arc
-      console.log("startPos", startPos);
       let x = startPos[0] + totalDistance * t;
       let y = startPos[1] + (1 - (t - 0.5) ** 2) * peakHeight;
       let z = startPos[2];

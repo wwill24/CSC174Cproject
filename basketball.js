@@ -262,7 +262,7 @@ export class Basketball extends Basketball_base {
   }
 
   shootBall() {
-    console.log("shoulder: ", this.human.r_shoulder);
+    this.human.get_right_shoulder_position();
     this.shootingSpline.updateSpline(this.human.r_shoulder);
     let releasePos = this.human.get_end_effector_position(); // vec3
 
@@ -372,6 +372,8 @@ export class Basketball extends Basketball_base {
     if(this.count && !this.walk){
       this.spline_t += 0.02; // adjust speed as needed (reduced from 0.001 to 0.0001)
       v0_vec3 = this.shootBall();
+      this.shootingSpline.draw(caller, this.uniforms, Mat4.identity(), this.materials.rack);
+
       if(this.spline_t > this.count_tracker - 0.9){
         this.particleSystem.particles[0].velocity = v0_vec3;
       }
