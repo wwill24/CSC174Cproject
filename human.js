@@ -321,7 +321,7 @@ export const Articulated_Human = class Articulated_Human {
   get_right_shoulder_position() {
     this.matrix_stack = [];
     this._rec_update(this.r_shoulder, Mat4.identity());
-    const v = this.r_shoulder.end_effector.global_position;
+    const v = this.right_shoulder_position.global_position;
     return vec3(v[0], v[1], v[2]);
   }
 
@@ -592,43 +592,51 @@ export class ShootingSpline {
     return vec3.add(p0, vec3.scale(vec3.subtract(p1, p0), frac));
   }
 
-  updateSpline(r_shoulder) {
+  updateSpline(human) {
     // Clear previous spline
     this.points = [];
   
-    // Get the starting position from the right shoulder
+    // Get the human's world position from the root matrix
+    const human_pos = human.root.location_matrix.times(vec4(0, 0, 0, 1));
+    const current_pos = vec3(human_pos[0], human_pos[1], human_pos[2]);
+  
+    // Get the right shoulder's position
+    const r_shoulder = human.r_shoulder;
     const startPos = r_shoulder.end_effector.global_position;
-    const shoulderMatrix = r_shoulder.articulation_matrix;
-    console.log("shoulderMatrix", shoulderMatrix);
+
+    // Get the root's articulation matrix
+    let rootMatrix = human.root.articulation_matrix;
+  
+    // Apply pi/2 rotation on the XZ plane 
+    const rotationMatrix = Mat4.rotation(Math.PI / 2, 0, 1, 0);
+    rootMatrix = rootMatrix.times(rotationMatrix);
+  
+    // Transform the shoulder position using rootMatrix to get the correct offset
+    const shoulderOffset = rootMatrix.times(vec3(startPos[0], startPos[1], startPos[2]));
+    console.log("shoulderOffset", shoulderOffset);
   
     // Define trajectory parameters
-    const peakHeight = 0.7; // Adjust this for a natural arc
-    const totalDistance = 0.6; // Adjust as needed
+    const peakHeight = 3; 
+    const totalDistance = 4;
   
     for (let i = 0; i <= this.numSamples; i++) {
       let t = i / this.numSamples;
   
-      // Compute parabolic arc
-      let x = startPos[0] + totalDistance * t;
-      let y = startPos[1] + (1 - (t - 0.5) ** 2) * peakHeight;
-      let z = startPos[2];
+      // Compute sine arc relative to the right shoulder
+      let localX = totalDistance * t;
+      let localY = peakHeight * Math.sin((Math.PI / 2) * t);
+      let localZ = 0;
   
-      // Transform using the shoulder's articulation matrix
-      let worldPoint = shoulderMatrix.times(vec4(x, y, z, 1));
+      // Transform using the rotated root articulation matrix
+      let worldPoint = rootMatrix.times(vec3(localX, localY, localZ));
   
-      // Store the new point
-      this.points.push(vec3(worldPoint[0], worldPoint[1], worldPoint[2]));
+      // Adjust the spline relative to the human's root position and shoulder offset
+      this.points.push(vec3(
+        worldPoint[0] + current_pos[0] + shoulderOffset[0],   
+        worldPoint[1] + current_pos[1] + shoulderOffset[1],  
+        worldPoint[2] + current_pos[2] + shoulderOffset[2]   
+      ));
     }
-  }
-  
-  
-  applyArticulation(matrix, localPoint, startPosition) {
-    let transformed = matrix.times(vec4(...localPoint, 1)); // Apply articulation transformation
-    return vec3(
-      transformed[0] + startPosition[0],
-      transformed[1] + startPosition[1],
-      transformed[2] + startPosition[2]
-    );
   }
 
   // Draw the spline as small spheres along the curve.
