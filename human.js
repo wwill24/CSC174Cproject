@@ -399,12 +399,7 @@ export const Articulated_Human = class Articulated_Human {
       armAmplitude * stepCycle, // Left arm moves forward when left leg moves back
     ]);
   }
-
-  // ---------------------------
-  // Shooting Animation
-  // ---------------------------
-  updateShooting(time) {}
-
+  
   // ---------------------------
   // Draw the human model.
   // (Modified to color leg segments green for debugging.)
@@ -558,12 +553,12 @@ export class ShootingSpline {
       this.points.push(pt);
     }
   }
-
+  
   placePointOnCurve(t) {
-    let x = t;
-    let y = Math.sin((Math.PI / 2) * t);
+    let x = t;  
+    let y = Math.sin((Math.PI / 2) * t);  
     return vec3(x, y, 0);
-  }
+}
 
   lerp(a, b, t) {
     return [
@@ -572,20 +567,20 @@ export class ShootingSpline {
       a[2] + (b[2] - a[2]) * t,
     ];
   }
-
+  
   getPointOnCurve(t) {
     t = t % 1;
     let scaled = t * this.numPoints;
     let index = Math.floor(scaled);
     let p0 = this.points[index];
     let p1 = this.points[(index + 1) % this.points.length];
-
+    
     return this.lerp(p0, p1, scaled - index);
   }
-
+  
   draw(caller, uniforms, board_transform, material) {
     const scaleMatrix = Mat4.scale(0.15, 0.15, 0.15);
-
+  
     for (const pt of this.points) {
       const worldPt = board_transform.times(vec4(...pt, 1));
       const transform = Mat4.translation(...worldPt).times(scaleMatrix);
