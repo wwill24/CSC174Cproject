@@ -27,24 +27,18 @@ class Spline {
     }
   }
   // Simulating a shooting motion with a parabolic arc
+  // In Spline class:
   getPoint(t) {
-    let startX = -0.5; // Start near the chest
-    let endX = 0.3; // Extend forward
-    let x = startX + (endX - startX) * t;
-
-    let startY = -0.3; // Hand starts low
-    let peakY = 0.7; // Peak height of the shot
-    let releaseY = 0.5; // Follow-through slightly lower than peak
-
-    // Parabolic arc for the shooting motion
-    let y = (1 - (t - 0.5) ** 2) * (peakY - startY) + startY;
-
-    let startZ = 0; // Close to body
-    let endZ = 0.6; // Extends outward
-    let z = startZ + (endZ - startZ) * t;
-
-    return vec3(x, y, z);
+    // These numbers now define a relative offset from the release point.
+    let offsetX = -0.5 + (0.3 + 0.5) * t;  // Moves from -0.5 to +0.3 relative to the hand.
+    // A parabolic arc in Y: starting low, rising to a peak, then falling a little.
+    let startY = -0.3, peakY = 0.7;
+    let offsetY = (1 - (t - 0.5) ** 2) * (peakY - startY) + startY;
+    let offsetZ = 0.6 * t;  // Extends forward from 0 to 0.6.
+    
+    return vec3(offsetX, offsetY, offsetZ);
   }
+
   // Linear interpolation between sample points.
   sample(t) {
     t = t % 1; // wrap around
@@ -90,6 +84,7 @@ export const Basketball_base =
       this.shootingSpline = new ShootingSpline();
       this.count = false;
       this.count_tracker = 1;
+      this.walk = false;
 
       this.shapes = {
         box: new defs.Cube(),
@@ -285,6 +280,7 @@ export class Basketball extends Basketball_base {
     let v0z = (target[2] - releasePos[2]) / T;
     let v0y = (target[1] - releasePos[1] - 0.5 * g * T * T) / T;
 
+
     let v0 = vec3(v0x, v0y, v0z); // Final velocity vector
 
     // Apply to the ball
@@ -295,6 +291,38 @@ export class Basketball extends Basketball_base {
 }
 
 
+
+  walking(t){
+    // // Get the ball's current position
+    const ball_pos = this.particleSystem.particles[0].position;
+
+    // Get human's current position
+    const human_pos = this.human.root.location_matrix.times(vec4(0,0,0,1));
+    const current_pos = vec3(human_pos[0], 0, human_pos[2]);
+
+    // Calculate direction to ball
+    const direction = vec3(ball_pos[0] - current_pos[0], 0, ball_pos[2] - current_pos[2]);
+    const distance = Math.sqrt(direction[0] * direction[0] + direction[2] * direction[2]);
+
+    if (distance > 3) {
+        const normalized_dir = vec3(direction[0]/distance, 0, direction[2]/distance);
+        const speed = 5;
+        const movement = normalized_dir.times(speed * (this.uniforms.animation_delta_time / 1000));
+
+        // Update human position and orientation
+        const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
+        this.human.root.location_matrix = Mat4.translation(
+            current_pos[0] + movement[0],
+            7.5,
+            current_pos[2] + movement[2]
+        ).times(Mat4.rotation(angle,0,1,0));
+    }
+    else{
+      this.walk = false;
+    }
+
+    this.human.updateWalking(t);
+  }
 
   render_animation(caller) {
     super.render_animation(caller);
@@ -312,32 +340,10 @@ export class Basketball extends Basketball_base {
     /**********************************
      *  Update & Draw the Human
      **********************************/
-    // // Get the ball's current position
-    // const ball_pos = this.particleSystem.particles[0].position;
-
-    // // Get human's current position
-    // const human_pos = this.human.root.location_matrix.times(vec4(0,0,0,1));
-    // const current_pos = vec3(human_pos[0], 0, human_pos[2]);
-
-    // // Calculate direction to ball
-    // const direction = vec3(ball_pos[0] - current_pos[0], 0, ball_pos[2] - current_pos[2]);
-    // const distance = Math.sqrt(direction[0] * direction[0] + direction[2] * direction[2]);
-
-    // if (distance > 3) {
-    //     const normalized_dir = vec3(direction[0]/distance, 0, direction[2]/distance);
-    //     const speed = 5;
-    //     const movement = normalized_dir.times(speed * (this.uniforms.animation_delta_time / 1000));
-
-    //     // Update human position and orientation
-    //     const angle = Math.atan2(normalized_dir[0], normalized_dir[2]);
-    //     this.human.root.location_matrix = Mat4.translation(
-    //         current_pos[0] + movement[0],
-    //         7.5,
-    //         current_pos[2] + movement[2]
-    //     ).times(Mat4.rotation(angle, 0, 1, 0));
-    // }
-
-    // this.human.updateWalking(t);
+    
+    if(this.walk){
+      this.walking(t);
+    }
 
     // Update shooting animation
     //this.human.updateShooting(t);
@@ -367,25 +373,27 @@ export class Basketball extends Basketball_base {
 
     let target;
     let v0_vec3;
-    if(this.count){
+    if(this.count && !this.walk){
       this.spline_t += 0.02; // adjust speed as needed (reduced from 0.001 to 0.0001)
       v0_vec3 = this.shootBall();
+      if(this.spline_t > this.count_tracker - 0.9){
+        this.particleSystem.particles[0].velocity = v0_vec3;
+      }
+      let splinePt = this.shootingSpline.sample(this.spline_t);
+      let worldPt = shot_transform.times(
+        vec4(splinePt[0], splinePt[1], splinePt[2], 1)
+      );
+      let handPos = this.human.get_end_effector_position();
+      let target = vec3.add(handPos, splinePt);
+      
+      this.human.updateIK(target);
     }
     if(this.spline_t >= this.count_tracker){
       this.count = false;
       this.count_tracker += 1;
     }
-    if(this.spline_t > this.count_tracker - 0.9){
-      this.particleSystem.particles[0].velocity = v0_vec3;
-    }
-    let splinePt = this.shootingSpline.sample(this.spline_t);
-    let worldPt = shot_transform.times(
-      vec4(splinePt[0], splinePt[1], splinePt[2], 1)
-    );
-    target = [worldPt[0], worldPt[1], worldPt[2]];
     
-    this.human.updateIK(target);
-    
+
     // Draw the human
     this.human.draw(caller, this.uniforms, this.materials.plastic);
 
@@ -404,6 +412,9 @@ export class Basketball extends Basketball_base {
     this.new_line();
     this.key_triggered_button( "Shoot", [ "t" ], function() {
       this.count = true;
+    } );
+    this.key_triggered_button( "Walk", [ "y" ], function() {
+      this.walk = true;
     } );
   }
 }
