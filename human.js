@@ -98,7 +98,6 @@ export const Articulated_Human = class Articulated_Human {
     this.torso_node.children_arcs.push(this.l_shoulder);
 
     let ll_arm_transform = Mat4.scale(1, 0.2, 0.2);
-    ll_arm_transform.pre_multiply(Mat4.translation(-1, 0, 0));
     this.ll_arm_node = new Node("ll_arm", sphere_shape, ll_arm_transform);
     const l_elbow_location = Mat4.translation(-2.4, 0, 0);
     this.l_elbow = new Arc(
@@ -222,6 +221,13 @@ export const Articulated_Human = class Articulated_Human {
     );
     this.r_wrist.end_effector = this.end_effector;
 
+    this.right_shoulder_position = new End_Effector(
+      "right_shoulder_position",
+      this.r_shoulder,
+      vec4(0, 0, 0, 1)
+    );
+    this.r_shoulder.end_effector = this.right_shoulder_position;
+
     // Retain IK DOF for the arm (if needed)
     this.dof = 7;
     this.Jacobian = null;
@@ -308,6 +314,13 @@ export const Articulated_Human = class Articulated_Human {
     this.matrix_stack = [];
     this._rec_update(this.root, Mat4.identity());
     const v = this.end_effector.global_position;
+    return vec3(v[0], v[1], v[2]);
+  }
+
+  get_right_shoulder_position() {
+    this.matrix_stack = [];
+    this._rec_update(this.r_shoulder, Mat4.identity());
+    const v = this.right_shoulder_position.global_position;
     return vec3(v[0], v[1], v[2]);
   }
 
@@ -399,7 +412,7 @@ export const Articulated_Human = class Articulated_Human {
       armAmplitude * stepCycle, // Left arm moves forward when left leg moves back
     ]);
   }
-  
+
   // ---------------------------
   // Draw the human model.
   // (Modified to color leg segments green for debugging.)
@@ -540,51 +553,5 @@ class End_Effector {
     this.parent = parent;
     this.local_position = local_position;
     this.global_position = null;
-  }
-}
-
-export class ShootingSpline {
-  constructor() {
-    this.numPoints = 1000;
-    this.points = [];
-    for (let i = 0; i <= this.numPoints; i++) {
-      let t = i / this.numPoints;
-      let pt = this.placePointOnCurve(t);
-      this.points.push(pt);
-    }
-  }
-  
-  placePointOnCurve(t) {
-    let x = t;  
-    let y = Math.sin((Math.PI / 2) * t);  
-    return vec3(x, y, 0);
-}
-
-  lerp(a, b, t) {
-    return [
-      a[0] + (b[0] - a[0]) * t,
-      a[1] + (b[1] - a[1]) * t,
-      a[2] + (b[2] - a[2]) * t,
-    ];
-  }
-  
-  getPointOnCurve(t) {
-    t = t % 1;
-    let scaled = t * this.numPoints;
-    let index = Math.floor(scaled);
-    let p0 = this.points[index];
-    let p1 = this.points[(index + 1) % this.points.length];
-    
-    return this.lerp(p0, p1, scaled - index);
-  }
-  
-  draw(caller, uniforms, board_transform, material) {
-    const scaleMatrix = Mat4.scale(0.15, 0.15, 0.15);
-  
-    for (const pt of this.points) {
-      const worldPt = board_transform.times(vec4(...pt, 1));
-      const transform = Mat4.translation(...worldPt).times(scaleMatrix);
-      caller.shapes.ball.draw(caller, uniforms, transform, material);
-    }
   }
 }
