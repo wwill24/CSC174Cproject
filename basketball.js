@@ -495,5 +495,12 @@ export class Basketball extends Basketball_base {
         this.particleSystem.createParticles(1);
         this.particleSystem.particles[0].velocity = vec3(0, 5, -5);
     });
+
+    this.key_triggered_button("Ball 3 (Up-Backward)", ["8"], function () {
+        // Reset particle system with the third velocity pattern
+        this.particleSystem.reset();
+        this.particleSystem.createParticles(1);
+        this.particleSystem.particles[0].velocity = vec3(0, 5, 5);
+    });
   }
 }
