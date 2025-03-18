@@ -87,6 +87,7 @@ export const Articulated_Human = class Articulated_Human {
     // ---------------------------
     let lu_arm_transform = Mat4.scale(1.2, 0.2, 0.2);
     lu_arm_transform.pre_multiply(Mat4.translation(-1.2, 0, 0));
+    lu_arm_transform.pre_multiply(Mat4.rotation(Math.PI / 3, 0, 0, 1));
     this.lu_arm_node = new Node("lu_arm", sphere_shape, lu_arm_transform);
     const l_shoulder_location = Mat4.translation(-0.6, 2, 0);
     this.l_shoulder = new Arc(
@@ -98,7 +99,8 @@ export const Articulated_Human = class Articulated_Human {
     this.torso_node.children_arcs.push(this.l_shoulder);
 
     let ll_arm_transform = Mat4.scale(1, 0.2, 0.2);
-    ll_arm_transform.pre_multiply(Mat4.translation(-1, 0, 0));
+    ll_arm_transform.pre_multiply(Mat4.translation(-2, -2, 0));
+    ll_arm_transform.pre_multiply(Mat4.rotation(Math.PI / 3, 0, 0, 1));
     this.ll_arm_node = new Node("ll_arm", sphere_shape, ll_arm_transform);
     const l_elbow_location = Mat4.translation(-2.4, 0, 0);
     this.l_elbow = new Arc(
@@ -110,7 +112,8 @@ export const Articulated_Human = class Articulated_Human {
     this.lu_arm_node.children_arcs.push(this.l_elbow);
 
     let l_hand_transform = Mat4.scale(0.4, 0.3, 0.2);
-    l_hand_transform.pre_multiply(Mat4.translation(-0.4, 0, 0));
+    l_hand_transform.pre_multiply(Mat4.translation(-2.4, -3.7, 0));
+    l_hand_transform.pre_multiply(Mat4.rotation(Math.PI / 3, 0, 0, 1));
     this.l_hand_node = new Node("l_hand", sphere_shape, l_hand_transform);
     const l_wrist_location = Mat4.translation(-2, 0, 0);
     this.l_wrist = new Arc(
