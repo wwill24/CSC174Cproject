@@ -475,7 +475,7 @@ export class Basketball extends Basketball_base {
 
     this.new_line();
 
-    this.key_triggered_button("Velocity 1 (Diagonal)", ["9"], function () {
+    this.key_triggered_button("Ball 1 (Diagonal)", ["9"], function () {
         // Reset particle system with the first velocity pattern
         this.particleSystem.reset();
         this.particleSystem.createParticles(1);
@@ -486,7 +486,7 @@ export class Basketball extends Basketball_base {
         );
     });
 
-    this.key_triggered_button("Velocity 2 (Up-Forward)", ["0"], function () {
+    this.key_triggered_button("Ball 2 (Up-Forward)", ["0"], function () {
         // Reset particle system with the second velocity pattern
         this.particleSystem.reset();
         this.particleSystem.createParticles(1);
