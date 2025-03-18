@@ -376,17 +376,20 @@ export class Basketball extends Basketball_base {
 
     let target;
     let g = -9.81;
+    let original_velocity = this.particleSystem.particles[0].velocity;
 
     // If ball is picked up, keep it in hand position
     if (this.ball_picked_up && !this.shoot_ball) {
       const hand_pos = this.human.get_end_effector_position();
       this.particleSystem.particles[0].position = hand_pos;
+      this.particleSystem.particles[0].velocity = vec3(0, 0, 0);
       // Update IK to keep hand on ball
       this.human.updateIK(hand_pos);
     }
 
     if (this.shoot_ball) {
       // Only allow shooting if ball is picked up
+      this.particleSystem.particles[0].velocity = original_velocity;
       if (!this.ball_picked_up) {
         this.shoot_ball = false;
         return;
@@ -394,7 +397,7 @@ export class Basketball extends Basketball_base {
 
       // Make human face the rim
       this.faceTargetRim();
-
+      // this.shootingSpline.draw(caller, this.uniforms, Mat4.identity(), this.materials.rack);
       // Rest of the shooting logic
       this.shootingSpline.updateSpline();
       this.spline_t += 0.02;
